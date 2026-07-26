@@ -632,27 +632,31 @@ body.mouse-active .mouse-spotlight {
   height: 38px;
   padding: 0 var(--space-md);
   font-family: var(--font-sans);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-3);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-2);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   transition: all var(--transition);
+  user-select: none;
 }
 
-.tab:hover {
+.tab:hover:not(.active) {
   color: var(--text-1);
   background: var(--surface-hover);
   border-color: var(--border-hover);
 }
 
-.tab.active {
-  color: var(--text-1);
-  background: var(--surface-hover);
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 1px var(--border-focus);
+.tab.active,
+.tab.active:hover,
+.tab.active:focus {
+  color: #030303 !important;
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
 }
 
 .webm-toggle-wrap {
@@ -865,27 +869,31 @@ tr.selected .radio-dot {
   height: 32px;
   padding: 0 var(--space-md);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: var(--font-sans);
   background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-3);
+  color: var(--text-2);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition);
+  user-select: none;
 }
 
-.preset-btn:hover {
+.preset-btn:hover:not(.active) {
   color: var(--text-1);
   background: var(--surface-hover);
   border-color: var(--border-hover);
 }
 
-.preset-btn.active {
-  color: var(--text-1);
-  background: var(--surface-hover);
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 1px var(--border-focus);
+.preset-btn.active,
+.preset-btn.active:hover,
+.preset-btn.active:focus {
+  color: #030303 !important;
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
 }
 
 .trim-inputs-grid {
