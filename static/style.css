@@ -634,29 +634,35 @@ body.mouse-active .mouse-spotlight {
   font-family: var(--font-sans);
   font-size: 0.82rem;
   font-weight: 500;
-  color: var(--text-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  color: #a1a1aa;
+  background: #0f0f10;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 180ms var(--ease-out);
   user-select: none;
 }
 
 .tab:hover:not(.active) {
-  color: var(--text-1);
-  background: var(--surface-hover);
-  border-color: var(--border-hover);
+  color: #ffffff;
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-.tab.active,
-.tab.active:hover,
-.tab.active:focus {
-  color: #030303 !important;
+.tab.active {
+  color: #000000 !important;
   background: #ffffff !important;
   border-color: #ffffff !important;
   font-weight: 600 !important;
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
+}
+
+.tab.active:hover,
+.tab.active:focus {
+  color: #ffffff !important;
+  background: #000000 !important;
+  border-color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
 }
 
 .webm-toggle-wrap {
@@ -871,29 +877,35 @@ tr.selected .radio-dot {
   font-size: 0.78rem;
   font-weight: 500;
   font-family: var(--font-sans);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-2);
+  color: #a1a1aa;
+  background: #0f0f10;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 180ms var(--ease-out);
   user-select: none;
 }
 
 .preset-btn:hover:not(.active) {
-  color: var(--text-1);
-  background: var(--surface-hover);
-  border-color: var(--border-hover);
+  color: #ffffff;
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-.preset-btn.active,
-.preset-btn.active:hover,
-.preset-btn.active:focus {
-  color: #030303 !important;
+.preset-btn.active {
+  color: #000000 !important;
   background: #ffffff !important;
   border-color: #ffffff !important;
   font-weight: 600 !important;
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
+}
+
+.preset-btn.active:hover,
+.preset-btn.active:focus {
+  color: #ffffff !important;
+  background: #000000 !important;
+  border-color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
 }
 
 .trim-inputs-grid {
