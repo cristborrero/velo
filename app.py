@@ -83,6 +83,17 @@ def download_start():
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
     format_id = (data.get("format_id") or "").strip()
+    
+    start_seconds = data.get("start_seconds")
+    end_seconds = data.get("end_seconds")
+
+    if start_seconds is not None:
+        try: start_seconds = float(start_seconds)
+        except (ValueError, TypeError): start_seconds = None
+
+    if end_seconds is not None:
+        try: end_seconds = float(end_seconds)
+        except (ValueError, TypeError): end_seconds = None
 
     if not url or not format_id:
         return jsonify({"error": "Faltan parámetros (url, format_id)."}), 400
@@ -120,6 +131,8 @@ def download_start():
                 format_id=format_id,
                 output_dir=dl_dir,
                 progress_callback=_on_progress,
+                start_seconds=start_seconds,
+                end_seconds=end_seconds,
             )
             # Find actual file (yt-dlp might change the extension)
             files = glob.glob(os.path.join(dl_dir, "*"))

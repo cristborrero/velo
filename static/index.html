@@ -265,6 +265,48 @@
               <p id="empty-group" class="empty-group hidden">No hay formatos disponibles en esta categoría.</p>
             </div>
 
+            <!-- Trim & Clip Timeline Bar (CapCut Style) -->
+            <div id="trim-section" class="trim-section">
+              <div class="trim-header">
+                <label class="trim-toggle-label">
+                  <input type="checkbox" id="trim-toggle" class="trim-checkbox">
+                  <span class="trim-toggle-custom"></span>
+                  <span class="trim-toggle-text">Recortar Fragmento (CapCut Trim)</span>
+                </label>
+                <span id="trim-badge" class="trim-badge hidden">Clip: 00:00 - 00:00 (0s)</span>
+              </div>
+
+              <div id="trim-controls" class="trim-controls hidden">
+                <!-- Presets -->
+                <div class="trim-presets">
+                  <button type="button" class="preset-btn" data-preset="15">15s</button>
+                  <button type="button" class="preset-btn" data-preset="30">30s</button>
+                  <button type="button" class="preset-btn" data-preset="60">60s</button>
+                  <button type="button" class="preset-btn active" data-preset="all">Completo</button>
+                </div>
+
+                <!-- Time Inputs & Slider Bar -->
+                <div class="trim-inputs-grid">
+                  <div class="trim-input-group">
+                    <label for="trim-start-input">Inicio</label>
+                    <input type="text" id="trim-start-input" class="trim-time-field" value="00:00" placeholder="00:00">
+                  </div>
+
+                  <div class="trim-slider-wrap">
+                    <div class="trim-track-bg"></div>
+                    <div id="trim-highlight" class="trim-highlight"></div>
+                    <input type="range" id="trim-start-range" class="trim-range" min="0" max="100" value="0" step="1">
+                    <input type="range" id="trim-end-range" class="trim-range" min="0" max="100" value="100" step="1">
+                  </div>
+
+                  <div class="trim-input-group">
+                    <label for="trim-end-input">Fin</label>
+                    <input type="text" id="trim-end-input" class="trim-time-field" value="00:00" placeholder="00:00">
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="actions">
               <button id="btn-download" type="button" disabled>
                 <span class="btn-label">Iniciar Descarga</span>

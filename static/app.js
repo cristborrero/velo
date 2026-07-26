@@ -117,6 +117,17 @@
   var emptyGroup     = document.getElementById("empty-group");
   var btnDownload    = document.getElementById("btn-download");
 
+  // Trim & Clip (CapCut Style) DOM Elements
+  var trimToggle     = document.getElementById("trim-toggle");
+  var trimBadge      = document.getElementById("trim-badge");
+  var trimControls   = document.getElementById("trim-controls");
+  var trimStartRange = document.getElementById("trim-start-range");
+  var trimEndRange   = document.getElementById("trim-end-range");
+  var trimStartInput = document.getElementById("trim-start-input");
+  var trimEndInput   = document.getElementById("trim-end-input");
+  var trimHighlight  = document.getElementById("trim-highlight");
+  var presetBtns     = document.querySelectorAll(".preset-btn");
+
   var progressSection = document.getElementById("progress-section");
   var progressBar     = document.getElementById("progress-bar");
   var progressPct     = document.getElementById("progress-pct");
@@ -134,6 +145,10 @@
   var allGroups = {};
   var activeGroup = "video";
   var pollTimer = null;
+
+  var totalDurationSecs = 0;
+  var trimStartSecs = 0;
+  var trimEndSecs = 0;
 
   // --- Helpers ---
   function setLoading(btn, on) {
@@ -177,6 +192,107 @@
     return d.innerHTML;
   }
 
+  // --- Trim & Clip Logic (CapCut Style) ---
+  function secondsToTimeStr(secs) {
+    if (isNaN(secs) || secs < 0) secs = 0;
+    var h = Math.floor(secs / 3600);
+    var m = Math.floor((secs % 3600) / 60);
+    var s = Math.floor(secs % 60);
+    if (h > 0) {
+      return h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    }
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function timeStrToSeconds(str) {
+    if (!str) return 0;
+    var parts = str.trim().split(":").map(function (p) { return parseFloat(p) || 0; });
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    } else if (parts.length === 1) {
+      return parts[0];
+    }
+    return 0;
+  }
+
+  function updateTrimUI() {
+    if (totalDurationSecs <= 0) return;
+
+    var start = parseFloat(trimStartRange.value) || 0;
+    var end = parseFloat(trimEndRange.value) || totalDurationSecs;
+
+    if (start >= end) {
+      start = Math.max(0, end - 1);
+      trimStartRange.value = start;
+    }
+    if (end <= start) {
+      end = Math.min(totalDurationSecs, start + 1);
+      trimEndRange.value = end;
+    }
+
+    trimStartSecs = start;
+    trimEndSecs = end;
+
+    var pctStart = (start / totalDurationSecs) * 100;
+    var pctEnd = (end / totalDurationSecs) * 100;
+
+    trimHighlight.style.left = pctStart + "%";
+    trimHighlight.style.width = Math.max(0, pctEnd - pctStart) + "%";
+
+    trimStartInput.value = secondsToTimeStr(start);
+    trimEndInput.value = secondsToTimeStr(end);
+
+    var diff = Math.round(end - start);
+    trimBadge.textContent = "Clip: " + secondsToTimeStr(start) + " - " + secondsToTimeStr(end) + " (" + diff + "s)";
+  }
+
+  if (trimToggle) {
+    trimToggle.addEventListener("change", function () {
+      var isChecked = trimToggle.checked;
+      trimControls.classList.toggle("hidden", !isChecked);
+      trimBadge.classList.toggle("hidden", !isChecked);
+      if (isChecked) updateTrimUI();
+    });
+  }
+
+  if (trimStartRange && trimEndRange) {
+    trimStartRange.addEventListener("input", updateTrimUI);
+    trimEndRange.addEventListener("input", updateTrimUI);
+  }
+
+  if (trimStartInput && trimEndInput) {
+    trimStartInput.addEventListener("change", function () {
+      var parsed = timeStrToSeconds(trimStartInput.value);
+      trimStartRange.value = Math.min(parsed, trimEndSecs - 1);
+      updateTrimUI();
+    });
+    trimEndInput.addEventListener("change", function () {
+      var parsed = timeStrToSeconds(trimEndInput.value);
+      trimEndRange.value = Math.max(parsed, trimStartSecs + 1);
+      updateTrimUI();
+    });
+  }
+
+  presetBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      presetBtns.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+
+      var p = btn.dataset.preset;
+      if (p === "all") {
+        trimStartRange.value = 0;
+        trimEndRange.value = totalDurationSecs;
+      } else {
+        var duration = parseFloat(p) || 15;
+        trimStartRange.value = 0;
+        trimEndRange.value = Math.min(totalDurationSecs, duration);
+      }
+      updateTrimUI();
+    });
+  });
+
   // --- Fetch info ---
   async function fetchInfo() {
     var url = urlInput.value.trim();
@@ -208,6 +324,15 @@
       }
 
       renderVideoCard(data);
+
+      totalDurationSecs = data.duration || 0;
+      if (totalDurationSecs > 0) {
+        trimStartRange.max = totalDurationSecs;
+        trimEndRange.max = totalDurationSecs;
+        trimStartRange.value = 0;
+        trimEndRange.value = totalDurationSecs;
+        updateTrimUI();
+      }
 
       var rawGroups = data.groups || {};
       var videoList = [];
@@ -352,13 +477,20 @@
     setLoading(btnDownload, true);
 
     try {
+      var payload = {
+        url: currentUrl,
+        format_id: selectedFormat.format_id,
+      };
+
+      if (trimToggle && trimToggle.checked) {
+        payload.start_seconds = trimStartSecs;
+        payload.end_seconds = trimEndSecs;
+      }
+
       var res = await fetch("/api/download/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: currentUrl,
-          format_id: selectedFormat.format_id,
-        }),
+        body: JSON.stringify(payload),
       });
 
       var data = await res.json();

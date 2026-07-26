@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from yt_dlp import YoutubeDL
-from yt_dlp.utils import DownloadError
+from yt_dlp.utils import DownloadError, download_range_func
 
 
 # Extensions that are not real downloadable media
@@ -214,8 +214,10 @@ class VideoDownloader:
         format_id: str,
         output_dir: str = ".",
         progress_callback: Optional[ProgressCallback] = None,
+        start_seconds: Optional[float] = None,
+        end_seconds: Optional[float] = None,
     ) -> str:
-        """Download a video in the selected format.
+        """Download a video in the selected format with optional time range clipping.
 
         Returns the path to the downloaded file.
 
@@ -257,6 +259,16 @@ class VideoDownloader:
             "quiet": True,
             "no_warnings": True,
         }
+
+        # Configure time range clipping if specified
+        if start_seconds is not None or end_seconds is not None:
+            start_val = float(start_seconds) if start_seconds is not None else 0.0
+            end_val = float(end_seconds) if end_seconds is not None else float("inf")
+            try:
+                opts["download_ranges"] = download_range_func([], [[start_val, end_val]])
+                opts["force_keyframes_at_cuts"] = True
+            except Exception:
+                pass
 
         if progress_callback:
             def _hook(d: Dict[str, Any]) -> None:

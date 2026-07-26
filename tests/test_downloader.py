@@ -209,6 +209,22 @@ class TestDownload:
         opts = call_args[0][0] if call_args[0] else {}
         assert opts.get("format") == "137+bestaudio/best"
 
+    @patch("downloader.core.YoutubeDL")
+    def test_download_with_trim_parameters(self, mock_ydl_cls: MagicMock) -> None:
+        """Verify yt-dlp receives download_ranges when start_seconds and end_seconds are passed."""
+        instance = mock_ydl_cls.return_value.__enter__.return_value
+        instance.download.return_value = 0
+        instance.extract_info.return_value = {"ext": "mp4", "title": "test", "formats": FAKE_INFO_DICT["formats"]}
+        instance.prepare_filename.return_value = "/tmp/test.mp4"
+
+        dl = VideoDownloader()
+        dl.download("https://example.com/video", "18", output_dir="/tmp", start_seconds=10.0, end_seconds=45.0)
+
+        call_args = mock_ydl_cls.call_args_list[-1]
+        opts = call_args[0][0] if call_args[0] else {}
+        assert "download_ranges" in opts
+        assert opts.get("force_keyframes_at_cuts") is True
+
 
     @patch("downloader.core.YoutubeDL")
     def test_download_failure_raises(self, mock_ydl_cls: MagicMock) -> None:
