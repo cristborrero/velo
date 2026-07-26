@@ -1,25 +1,59 @@
-# Velo — High-Speed Multimedia Extraction 🚀
+<div align="center">
 
-**Velo** es una plataforma web y herramienta de línea de comandos de alto rendimiento para inspeccionar metadatos y descargar videos/audios en resolución original desde más de 1000 plataformas en la web (YouTube, TikTok, Instagram, Twitter/X, Vimeo, Twitch y más), construida sobre **Python (Flask)**, **yt-dlp**, **FFmpeg** y un sistema visual de alta gama inspirado en el diseño de **Vercel / Linear / Optimus**.
+  # ⚡ Velo — High-Speed Multimedia Extraction Platform
+
+  <p><b>Plataforma web de alto rendimiento y arquitectura limpia para la inspección y descarga multimedia directa en calidad original.</b></p>
+
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-007ACC?logo=python&logoColor=white)](https://python.org)
+  [![Flask](https://img.shields.io/badge/Framework-Flask-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+  [![Tests: 17 Passed](https://img.shields.io/badge/Tests-17%20Passed-10B981.svg)](tests/)
+  [![Design: Vercel / Linear](https://img.shields.io/badge/Design-Vercel%2FLinear%20Optimus-030303?logo=vercel&logoColor=white)](static/style.css)
+  [![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render&logoColor=black)](https://render.com)
+
+  <br />
+
+  <a href="#-demostración-y-sistema-de-diseño">Ver Interfaz</a> •
+  <a href="#-características-destacadas">Características</a> •
+  <a href="#-arquitectura-del-sistema">Arquitectura</a> •
+  <a href="#-instalación-y-uso-local">Uso Local</a> •
+  <a href="#-despliegue-en-producción-render">Despliegue Render</a>
+
+</div>
 
 ---
 
-## ⚡ Características Principales
+## 🎯 Visión General
 
-- **Inspección Instantánea de Metadatos**: Extrae título, canal/creador, duración y miniatura en tiempo real.
-- **Categorización de Formatos**:
-  - **Video + Audio**: Formatos listos para reproducir (1080p, 4K, 60fps).
-  - **Solo Audio**: Extracción directa de sonido en formatos nativos (MP3, M4A, Opus).
-- **Lógica Asíncrona sin Timeout**: Motor con procesamiento en hilos de fondo y actualización de estado en tiempo real via API REST polling.
-- **Barra de Progreso Interactiva**: Porcentaje, velocidad de red (`MB/s`), total transferido y tiempo estimado de descarga (ETA).
-- **Diseño Optimus (Vercel / Linear Tier)**:
-  - Estética OLED `#030303` con retícula técnica ambiental e iluminación interactiva por cursor (`mouse spotlight`).
-  - Barra de navegación en isla flotante de cristal (`backdrop-filter: blur(24px)`).
-  - Ventana de producto embebida con acabados de macOS e iluminación `border-beam`.
-  - Layout en Bento Grid asimétrico para la sección de capacidades.
-  - Módulo de donaciones integrado con PayPal (`Hosted Buttons`).
-- **Español Neutro**: Copy 100% profesional sin modismos regionales.
-- **Suite de Pruebas Automatizadas**: Pruebas de unidad e integración con `pytest` (17/17 pruebas).
+**Velo** combina la potencia del motor de extracción universal `yt-dlp` y procesamiento de streams `FFmpeg` con una interfaz web ultrarrápida diseñada bajo los estándares estéticos de **Vercel & Linear (Plantilla Optimus)**. 
+
+Permite inspeccionar metadatos y descargar contenidos en resolución original (**4K, 1080p, 60fps**) y audios de alta fidelidad (**MP3, M4A, Opus**) desde más de 1,000 plataformas (YouTube, TikTok, Instagram, Twitter/X, Vimeo, Twitch, entre otras), sin anuncios, sin registros y sin límites de velocidad.
+
+---
+
+## 🎨 Demostración y Sistema de Diseño
+
+El apartado visual sigue una filosofía de diseño minimalista de alto nivel:
+
+- **Fondo OLED `#030303` con Iluminación Interactiva**: Retícula técnica ambiental con resplandor radial dinámico (`mouse spotlight`) que sigue la posición exacta del cursor.
+- **Barra de Navegación Flotante (`Floating Island Nav`)**: Con desenfoque de fondo de micro-precisión (`backdrop-filter: blur(24px)`).
+- **Marco de Aplicación Embebido**: La herramienta de descarga está integrada directamente en el Hero dentro de una ventana de aplicación macOS con indicador de luz `border-beam`.
+- **Bento Grid Asimétrico**: Organización de características principales en tarjetas de densidad variable.
+- **Módulo de Donaciones de PayPal**: Componente integrado sin fricción con renderizado de contenedor oscuro.
+- **Español Neutro**: Redacción técnica profesional libre de modismos regionales.
+
+---
+
+## ⚡ Características Destacadas
+
+- 🔍 **Inspección Instantánea de Metadatos**: Extrae título, creador, duración y miniatura sin descargar el contenido completo.
+- 🎬 **Filtrado Inteligente de Formatos**:
+  - **Video + Audio**: Formatos HD/4K combinados listos para reproducir.
+  - **Solo Audio**: Extracción directa de pistas musicales y podcasts.
+- ⚡ **Procesamiento Asíncrono no Bloqueante**: Ejecución de descargas en hilos de fondo (`threading.Thread`) para evitar *timeouts* HTTP en servidores web.
+- 📊 **Telemetría en Tiempo Real**: Barra de progreso con indicador de porcentaje, bytes transferidos/totales, velocidad de red (`MB/s`) y tiempo restante estimado (ETA).
+- 💻 **Interfaz Dual (CLI & Web)**: Servidor web Flask y menú interactivo de terminal.
+- 🧪 **Suite de Pruebas de Calidad**: Cobertura unitaria y de integración automatizada mediante `pytest` (17/17 pruebas pasadas).
 
 ---
 
@@ -48,19 +82,22 @@
                         └──────────────┘
 ```
 
-### Flujo de Descarga Asíncrona
+### Especificación de la API REST
 
-1. **`POST /api/info`**: Recibe la URL del contenido, inspecciona la API de `yt-dlp` y retorna metadatos y categorías de formato.
-2. **`POST /api/download/start`**: Arranca un `threading.Thread` en segundo plano en Flask, asigna un `download_id` único y responde de inmediato.
-3. **`GET /api/download/status/<id>`**: El cliente realiza polling (cada 500ms) para consultar el porcentaje de avance, velocidad y ETA.
-4. **`GET /api/download/file/<id>`**: Transmite el archivo final desde el servidor hacia el navegador del cliente.
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/` | Sirve la Landing Page web unificada (`index.html`) |
+| `POST` | `/api/info` | Retorna metadatos y listas de formatos categorizados |
+| `POST` | `/api/download/start` | Arranca la descarga en segundo plano y retorna `download_id` |
+| `GET` | `/api/download/status/<id>` | Consulta el progreso, velocidad y estado (`downloading`, `done`, `error`) |
+| `GET` | `/api/download/file/<id>` | Transmite el archivo final descargado hacia el navegador |
 
 ---
 
-## 🛠️ Requisitos Previos
+## 🛠️ Requisitos del Sistema
 
-- **Python**: 3.8, 3.11 o superior.
-- **FFmpeg**: Requerido en el sistema para combinar flujos de video HD y audio separados.
+- **Python**: 3.8 o 3.11+
+- **FFmpeg**: Requerido en el sistema para la combinación de flujos de video y audio separados en alta definición.
 
 ---
 
@@ -83,68 +120,60 @@
    pip install -r requirements.txt
    ```
 
-4. **Ejecutar el Servidor Web**:
+4. **Iniciar el servidor web**:
    ```bash
    python app.py
    ```
-   Abre en tu navegador: `http://localhost:5000` (o el puerto asignado).
+   Accede en tu navegador a: `http://localhost:5001`
 
-5. **Ejecutar la interfaz de Línea de Comandos (CLI)**:
+5. **Iniciar la herramienta de terminal (CLI)**:
    ```bash
    python main.py
    ```
 
-6. **Ejecutar Suite de Pruebas**:
+6. **Ejecutar la suite de pruebas automatizadas**:
    ```bash
    pytest tests/ -v
    ```
 
 ---
 
-## 🚀 Guía de Despliegue en Producción
+## 🚀 Despliegue en Producción (Render)
 
-### Opción 1: Despliegue en Render (Recomendado)
+El proyecto incluye configuración nativa para **Render Blueprint** (`render.yaml`), **Procfile** (Gunicorn) y **Dockerfile**.
 
-Render permite desplegar Velo fácilmente utilizando el archivo `render.yaml` o mediante Docker.
+### Despliegue Unificado con Render Blueprint (Recomendado)
 
-#### Método A: Render Blueprint (con `render.yaml`)
-1. Conecta tu cuenta de GitHub con [Render.com](https://render.com).
-2. Crea un nuevo **Blueprint Project** y selecciona el repositorio de Velo.
-3. Render detectará automáticamente `render.yaml` e instalará `ffmpeg`, Python 3.11, las dependencias y ejecutará Gunicorn mediante:
-   ```bash
-   gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 app:app
-   ```
-
-#### Método B: Render con Docker Container
-1. En Render, crea un **Web Service**.
-2. Selecciona **Docker** como el entorno de ejecución.
-3. Render construirá la imagen automáticamente desde el `Dockerfile` del proyecto (que incluye Python 3.11, FFmpeg y Gunicorn pre-configurados).
+1. Ingresa a tu panel en **[Render.com](https://dashboard.render.com)**.
+2. Haz clic en **New +** y selecciona **Blueprint**.
+3. Conecta el repositorio `cristborrero/velo`.
+4. Render detectará automáticamente `render.yaml` y ejecutará los siguientes pasos:
+   - Instalación del paquete de sistema `ffmpeg`.
+   - Instalación de dependencias Python.
+   - Ejecución del servidor WSGI `gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 app:app`.
 
 ---
 
-### Opción 2: Despliegue con Docker (Cualquier Proveedor)
+## 🐳 Despliegue con Docker
 
-Puedes construir y ejecutar el contenedor Docker localmente o en servicios como Railway, Fly.io, GCP Cloud Run o AWS App Runner:
+Construye y ejecuta el contenedor Docker en cualquier entorno (Railway, Fly.io, GCP Cloud Run, AWS):
 
-1. **Construir la imagen**:
-   ```bash
-   docker build -t velo-app .
-   ```
+```bash
+# Construir la imagen Docker
+docker build -t velo-app .
 
-2. **Ejecutar el contenedor**:
-   ```bash
-   docker run -d -p 5000:5000 --name velo velo-app
-   ```
-   Accede en: `http://localhost:5000`
+# Ejecutar el contenedor
+docker run -d -p 5000:5000 --name velo velo-app
+```
 
 ---
 
-## 💖 Donaciones & Código Abierto
+## 💖 Donaciones y Código Abierto
 
-Velo es un proyecto de código abierto libre de publicidad y suscripciones. Incorpora integración nativa con botones de donación voluntaria de PayPal para el mantenimiento de infraestructura de servidores.
+Velo es un proyecto de código abierto libre de publicidad y suscripciones. Incorpora integración con donaciones voluntarias de PayPal para contribuir al mantenimiento de infraestructura.
 
 ---
 
 ## 📄 Licencia
 
-Licencia MIT — Proyecto desarrollado para aprendizaje y uso libre.
+Este proyecto está bajo la Licencia **MIT** — Libre para aprendizaje, modificación y distribución.
