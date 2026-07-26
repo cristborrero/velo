@@ -607,21 +607,142 @@ body.mouse-active .mouse-spotlight {
 
 .dot-sep::before { content: "\00B7"; font-weight: 700; }
 
-/* Tabs inside Window */
-.tab-bar {
-  display: flex;
-  gap: 4px;
+/* ============================================================
+   VERCEL / FRAMER SAAS TOOL CONSOLE
+   ============================================================ */
+.console-section {
   margin-top: var(--space-lg);
-  margin-bottom: var(--space-md);
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: fadeUp 350ms var(--ease-out) both;
+}
+
+.console-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  gap: var(--space-md);
+}
+
+.console-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.console-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.console-tab:hover {
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.console-tab.active {
+  color: var(--text-1);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  font-weight: 600;
+}
+
+.console-options {
+  display: flex;
+  align-items: center;
+}
+
+/* Switch Control (Framer / Vercel style) */
+.switch-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch-control input { display: none; }
+
+.switch-slider {
+  width: 32px;
+  height: 18px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-hover);
+  border-radius: 9px;
+  position: relative;
+  transition: background 300ms var(--ease-out);
+}
+
+.switch-slider::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--text-3);
+  border-radius: 50%;
+  transition: transform 300ms var(--ease-out), background 300ms var(--ease-out);
+}
+
+.switch-control input:checked + .switch-slider {
+  background: var(--text-1);
+}
+
+.switch-control input:checked + .switch-slider::after {
+  transform: translateX(14px);
+  background: var(--bg);
+}
+
+.switch-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-3);
+  transition: color var(--transition);
+}
+
+.switch-control input:checked ~ .switch-label {
+  color: var(--text-1);
+}
+
+/* Panels */
+.console-panel {
+  padding: var(--space-md);
+}
+
+.console-panel.hidden {
+  display: none !important;
+}
+
+.category-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 4px;
+  padding: 3px;
 }
 
 .tab {
   flex: 1;
-  height: 36px;
+  height: 32px;
   padding: 0 var(--space-md);
   font-size: 0.73rem;
   font-weight: 600;
@@ -641,7 +762,6 @@ body.mouse-active .mouse-spotlight {
 }
 
 /* Formats Table */
-.formats-section { animation: fadeUp 350ms var(--ease-out) both; }
 
 .table-wrap {
   background: var(--surface);

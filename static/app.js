@@ -139,6 +139,11 @@
   var statusSection  = document.getElementById("status-section");
   var statusMsg      = document.getElementById("status-msg");
 
+  // Console Tabs & Switches
+  var consoleTabs    = document.querySelectorAll(".console-tab");
+  var consolePanels  = document.querySelectorAll(".console-panel");
+  var toggleWebM     = document.getElementById("toggle-webm");
+
   // --- State ---
   var currentUrl = "";
   var selectedFormat = null;
@@ -420,11 +425,35 @@
 
   document.querySelectorAll(".tab").forEach(function (t) {
     t.addEventListener("click", function () {
-      switchTab(t.dataset.group);
+      if (t.dataset.group) {
+        switchTab(t.dataset.group);
+      }
     });
   });
 
-  // --- Format table ---
+  // --- Console Sub-Nav Tabs ---
+  consoleTabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      var targetPanel = tab.dataset.panel;
+      consoleTabs.forEach(function (t) { t.classList.remove("active"); });
+      tab.classList.add("active");
+
+      consolePanels.forEach(function (p) {
+        var isMatch = (p.id === "panel-" + targetPanel);
+        p.classList.toggle("hidden", !isMatch);
+        if (isMatch) p.classList.add("active");
+        else p.classList.remove("active");
+      });
+    });
+  });
+
+  if (toggleWebM) {
+    toggleWebM.addEventListener("change", function () {
+      renderFormats(allGroups[activeGroup] || []);
+    });
+  }
+
+  // --- Format table (Smart Filtering) ---
   function renderFormats(formats) {
     formatsBody.innerHTML = "";
 
@@ -433,9 +462,34 @@
       return;
     }
 
+    // Smart Filter: Hide WebM formats by default unless toggleWebM is checked
+    var showWebM = toggleWebM && toggleWebM.checked;
+    var filteredFormats = formats;
+
+    if (!showWebM) {
+      // Keep mp4 formats or non-webm formats, or keep webm only if no mp4 exists for that resolution
+      var resolutionsWithMp4 = {};
+      formats.forEach(function (fmt) {
+        if (fmt.ext === "mp4") {
+          resolutionsWithMp4[fmt.resolution] = true;
+        }
+      });
+
+      filteredFormats = formats.filter(function (fmt) {
+        if (fmt.ext === "webm" && resolutionsWithMp4[fmt.resolution]) {
+          return false; // hide webm duplicate when mp4 is available
+        }
+        return true;
+      });
+    }
+
+    if (!filteredFormats.length) {
+      filteredFormats = formats; // fallback
+    }
+
     emptyGroup.classList.add("hidden");
 
-    formats.forEach(function (fmt) {
+    filteredFormats.forEach(function (fmt) {
       var tr = document.createElement("tr");
       tr.dataset.formatId = fmt.format_id;
       tr.dataset.ext = fmt.ext;
