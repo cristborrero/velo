@@ -139,9 +139,6 @@
   var statusSection  = document.getElementById("status-section");
   var statusMsg      = document.getElementById("status-msg");
 
-  // Console Tabs & Switches
-  var consoleTabs    = document.querySelectorAll(".console-tab");
-  var consolePanels  = document.querySelectorAll(".console-panel");
   var toggleWebM     = document.getElementById("toggle-webm");
 
   // --- State ---
@@ -428,22 +425,6 @@
       if (t.dataset.group) {
         switchTab(t.dataset.group);
       }
-    });
-  });
-
-  // --- Console Sub-Nav Tabs ---
-  consoleTabs.forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      var targetPanel = tab.dataset.panel;
-      consoleTabs.forEach(function (t) { t.classList.remove("active"); });
-      tab.classList.add("active");
-
-      consolePanels.forEach(function (p) {
-        var isMatch = (p.id === "panel-" + targetPanel);
-        p.classList.toggle("hidden", !isMatch);
-        if (isMatch) p.classList.add("active");
-        else p.classList.remove("active");
-      });
     });
   });
 

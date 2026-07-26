@@ -243,23 +243,17 @@
             </div>
           </section>
 
-          <!-- Studio Tool Console (Vercel / Framer Architecture) -->
-          <section id="formats-section" class="console-section hidden">
-            <!-- Console Bar Header -->
-            <div class="console-bar">
-              <div class="console-tabs" role="tablist">
-                <button class="console-tab active" data-panel="formats" role="tab" aria-selected="true">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                  <span>Formatos</span>
-                </button>
-                <button class="console-tab" data-panel="trim" role="tab" aria-selected="false">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 2v12M12 2v12M2 6h12M2 10h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                  <span>Recortar Clip</span>
-                </button>
+          <!-- Formats & Tools Section -->
+          <section id="formats-section" class="formats-section hidden">
+            <!-- Format Category & Options Bar -->
+            <div class="formats-header-bar">
+              <div class="tab-bar" role="tablist">
+                <button class="tab active" data-group="video" role="tab" aria-selected="true">Video + Audio</button>
+                <button class="tab" data-group="audio" role="tab" aria-selected="false">Solo Audio</button>
               </div>
 
               <!-- Options Switch (WebM / Advanced Codecs) -->
-              <div class="console-options">
+              <div class="webm-toggle-wrap">
                 <label class="switch-control" title="Mostrar formatos WebM, VP9 y AV1 adicionales">
                   <input type="checkbox" id="toggle-webm">
                   <span class="switch-slider"></span>
@@ -268,42 +262,35 @@
               </div>
             </div>
 
-            <!-- Panel 1: Formatos & Calidad -->
-            <div id="panel-formats" class="console-panel active">
-              <div class="category-tabs" role="tablist">
-                <button class="tab active" data-group="video" role="tab" aria-selected="true">Video + Audio</button>
-                <button class="tab" data-group="audio" role="tab" aria-selected="false">Solo Audio</button>
-              </div>
-
-              <div class="table-wrap">
-                <table id="formats-table">
-                  <thead>
-                    <tr>
-                      <th class="col-radio"></th>
-                      <th>Resolución</th>
-                      <th>Formato</th>
-                      <th class="col-size">Tamaño Aprox.</th>
-                    </tr>
-                  </thead>
-                  <tbody id="formats-body"></tbody>
-                </table>
-                <p id="empty-group" class="empty-group hidden">No hay formatos disponibles en esta categoría.</p>
-              </div>
+            <!-- Formats Table -->
+            <div class="table-wrap">
+              <table id="formats-table">
+                <thead>
+                  <tr>
+                    <th class="col-radio"></th>
+                    <th>Resolución</th>
+                    <th>Formato</th>
+                    <th class="col-size">Tamaño Aprox.</th>
+                  </tr>
+                </thead>
+                <tbody id="formats-body"></tbody>
+              </table>
+              <p id="empty-group" class="empty-group hidden">No hay formatos disponibles en esta categoría.</p>
             </div>
 
-            <!-- Panel 2: Recorte de Clip (CapCut Trim) -->
-            <div id="panel-trim" class="console-panel hidden">
-              <div id="trim-section" class="trim-section">
-                <div class="trim-header">
-                  <label class="trim-toggle-label">
-                    <input type="checkbox" id="trim-toggle" class="trim-checkbox">
-                    <span class="trim-toggle-custom"></span>
-                    <span class="trim-toggle-text">Activar Recorte (CapCut Trim)</span>
-                  </label>
-                  <span id="trim-badge" class="trim-badge hidden">Clip: 00:00 - 00:00 (0s)</span>
-                </div>
+            <!-- Horizontal Trim & Clip Bar (CapCut Style) -->
+            <div id="trim-section" class="trim-section">
+              <div class="trim-header">
+                <label class="trim-toggle-label">
+                  <input type="checkbox" id="trim-toggle" class="trim-checkbox">
+                  <span class="trim-toggle-custom"></span>
+                  <span class="trim-toggle-text">Recortar Clip (CapCut Trim)</span>
+                </label>
+                <span id="trim-badge" class="trim-badge hidden">Clip: 00:00 - 00:00 (0s)</span>
+              </div>
 
-                <div id="trim-controls" class="trim-controls hidden">
+              <div id="trim-controls" class="trim-controls hidden">
+                <div class="trim-horizontal-bar">
                   <!-- Presets -->
                   <div class="trim-presets">
                     <button type="button" class="preset-btn" data-preset="15">15s</button>
@@ -312,7 +299,7 @@
                     <button type="button" class="preset-btn active" data-preset="all">Completo</button>
                   </div>
 
-                  <!-- Time Inputs & Slider Bar -->
+                  <!-- Horizontal Time Inputs & Slider Bar -->
                   <div class="trim-inputs-grid">
                     <div class="trim-input-group">
                       <label for="trim-start-input">Inicio</label>
@@ -335,6 +322,7 @@
               </div>
             </div>
 
+            <!-- Action Button -->
             <div class="actions">
               <button id="btn-download" type="button" disabled>
                 <span class="btn-label">Iniciar Descarga</span>
