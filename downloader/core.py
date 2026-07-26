@@ -119,16 +119,11 @@ ProgressCallback = Callable[[float, int, int, float, float], None]
 
 
 def _get_default_ydl_opts() -> Dict[str, Any]:
-    """Get default yt-dlp options with YouTube bot bypass player clients and cookies support."""
+    """Get default yt-dlp options with cookies.txt auto-detection."""
     import os
     opts: Dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android", "ios", "mweb", "web"]
-            }
-        }
     }
 
     # Auto-detect cookies.txt in workspace or via env var
@@ -160,18 +155,27 @@ class VideoDownloader:
         opts = _get_default_ydl_opts()
         opts["skip_download"] = True
 
+        info = None
         try:
             with YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=False)
         except (DownloadError, Exception) as exc:
             err_str = str(exc)
             if "Sign in to confirm you're not a bot" in err_str or "bot" in err_str.lower():
+                # Retry with fallback player_client if blocked by bot check
+                fallback_opts = dict(opts)
+                fallback_opts["extractor_args"] = {"youtube": {"player_client": ["android", "web"]}}
+                try:
+                    with YoutubeDL(fallback_opts) as ydl_fb:
+                        info = ydl_fb.extract_info(url, download=False)
+                except Exception as fb_exc:
+                    raise ValueError(
+                        "YouTube ha solicitado verificación anti-bot. Añade un archivo 'cookies.txt' en la raíz del proyecto para bypass continuo."
+                    ) from fb_exc
+            else:
                 raise ValueError(
-                    "YouTube ha solicitado verificación anti-bot. Se han activado los clientes de respaldo (Android/iOS). Si persiste, añade un archivo 'cookies.txt' en la raíz del proyecto."
+                    f"No se pudo extraer información del video: {exc}"
                 ) from exc
-            raise ValueError(
-                f"No se pudo extraer información del video: {exc}"
-            ) from exc
 
         if info is None:
             raise ValueError("No se pudo extraer información del video.")
