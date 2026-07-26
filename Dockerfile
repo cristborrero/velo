@@ -16,8 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set default port environment variable
-ENV PORT=5000
-EXPOSE 5000
+ENV PORT=10000
+EXPOSE 10000
 
-# Start server using Gunicorn WSGI
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "4", "app:app"]
+# Start server using Gunicorn WSGI binding to dynamic PORT
+CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 2 --threads 4 app:app"
