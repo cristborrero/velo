@@ -1,0 +1,450 @@
+/* ============================================================
+   Velo — Client Logic (Vercel / Linear Optimus Architecture)
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  /* ============================================================
+     LANDING PAGE — Navbar, Scroll Reveal, Smooth Scroll
+     ============================================================ */
+
+  // --- Interactive Global Mouse Spotlight & Grid Texture ---
+  var ticking = false;
+  window.addEventListener("mousemove", function (e) {
+    if (!ticking) {
+      window.requestAnimationFrame(function () {
+        document.body.style.setProperty("--mouse-x", e.clientX + "px");
+        document.body.style.setProperty("--mouse-y", e.clientY + "px");
+        if (!document.body.classList.contains("mouse-active")) {
+          document.body.classList.add("mouse-active");
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+
+  window.addEventListener("mouseleave", function () {
+    document.body.classList.remove("mouse-active");
+  });
+
+  // --- Navbar scroll effect ---
+  var navbar = document.getElementById("navbar");
+  if (navbar) {
+    var onScroll = function () {
+      if (window.scrollY > 24) {
+        navbar.classList.add("scrolled");
+      } else {
+        navbar.classList.remove("scrolled");
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+
+  // --- PayPal Hosted Donation Button Render ---
+  function initPayPalButton() {
+    if (window.paypal && typeof window.paypal.HostedButtons === "function") {
+      var container = document.getElementById("paypal-container-EW4SNGL8SU6Z2");
+      if (container && container.children.length === 0) {
+        window.paypal.HostedButtons({
+          hostedButtonId: "EW4SNGL8SU6Z2",
+        }).render("#paypal-container-EW4SNGL8SU6Z2");
+      }
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPayPalButton);
+  } else {
+    initPayPalButton();
+  }
+
+  // --- Smooth scroll for anchor links ---
+  document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+    link.addEventListener("click", function (e) {
+      var target = document.querySelector(link.getAttribute("href"));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+
+  // --- Scroll reveal (IntersectionObserver) ---
+  var revealElements = document.querySelectorAll(".reveal");
+  if (revealElements.length > 0 && "IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+    );
+
+    revealElements.forEach(function (el) {
+      observer.observe(el);
+    });
+  } else {
+    revealElements.forEach(function (el) {
+      el.classList.add("visible");
+    });
+  }
+
+
+  /* ============================================================
+     DOWNLOAD TOOL — Application Logic
+     ============================================================ */
+
+  // --- DOM Elements ---
+  var urlInput       = document.getElementById("url-input");
+  var btnFetch       = document.getElementById("btn-fetch");
+  var inputError     = document.getElementById("input-error");
+
+  var videoCard      = document.getElementById("video-card");
+  var videoThumb     = document.getElementById("video-thumb");
+  var videoTitle     = document.getElementById("video-title");
+  var videoUploader  = document.getElementById("video-uploader");
+  var videoDuration  = document.getElementById("video-duration");
+
+  var formatsSection = document.getElementById("formats-section");
+  var formatsBody    = document.getElementById("formats-body");
+  var emptyGroup     = document.getElementById("empty-group");
+  var btnDownload    = document.getElementById("btn-download");
+
+  var progressSection = document.getElementById("progress-section");
+  var progressBar     = document.getElementById("progress-bar");
+  var progressPct     = document.getElementById("progress-pct");
+  var progressLabel   = document.getElementById("progress-label");
+  var progressSize    = document.getElementById("progress-size");
+  var progressSpeed   = document.getElementById("progress-speed");
+  var progressEta     = document.getElementById("progress-eta");
+
+  var statusSection  = document.getElementById("status-section");
+  var statusMsg      = document.getElementById("status-msg");
+
+  // --- State ---
+  var currentUrl = "";
+  var selectedFormat = null;
+  var allGroups = {};
+  var activeGroup = "video";
+  var pollTimer = null;
+
+  // --- Helpers ---
+  function setLoading(btn, on) {
+    btn.classList.toggle("loading", on);
+    btn.disabled = on;
+  }
+
+  function showError(msg) { inputError.textContent = msg; }
+  function clearError()   { inputError.textContent = ""; }
+
+  function showStatus(msg, type) {
+    statusSection.classList.remove("hidden");
+    statusMsg.textContent = msg;
+    statusMsg.className = "status-msg " + type;
+  }
+
+  function hideStatus() { statusSection.classList.add("hidden"); }
+
+  function formatBytes(bytes) {
+    if (!bytes || bytes <= 0) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1048576).toFixed(1) + " MB";
+  }
+
+  function formatSize(val) {
+    if (typeof val === "number") return val.toFixed(1) + " MB";
+    return val || "\u2014";
+  }
+
+  function formatEta(secs) {
+    if (!secs || secs <= 0) return "";
+    var m = Math.floor(secs / 60);
+    var s = Math.floor(secs % 60);
+    return m > 0 ? m + "m " + s + "s" : s + "s";
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // --- Fetch info ---
+  async function fetchInfo() {
+    var url = urlInput.value.trim();
+    if (!url) { showError("Por favor ingresa una URL válida."); return; }
+
+    clearError();
+    hideStatus();
+    videoCard.classList.add("hidden");
+    formatsSection.classList.add("hidden");
+    progressSection.classList.add("hidden");
+    selectedFormat = null;
+    btnDownload.disabled = true;
+    currentUrl = url;
+
+    setLoading(btnFetch, true);
+
+    try {
+      var res = await fetch("/api/info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url }),
+      });
+
+      var data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || "Error al obtener la información del contenido.");
+        return;
+      }
+
+      renderVideoCard(data);
+
+      var rawGroups = data.groups || {};
+      var videoList = [];
+
+      if (rawGroups.combined) {
+        videoList = videoList.concat(rawGroups.combined);
+      }
+
+      if (data.has_ffmpeg && rawGroups.video_only) {
+        videoList = videoList.concat(rawGroups.video_only);
+      }
+
+      function getResolutionHeight(resStr) {
+        if (!resStr) return 0;
+        var m = resStr.match(/(\d+)[pP]/);
+        if (m) return parseInt(m[1], 10);
+        m = resStr.match(/[xX](\d+)/);
+        if (m) return parseInt(m[1], 10);
+        m = resStr.match(/(\d+)/);
+        return m ? parseInt(m[1], 10) : 0;
+      }
+
+      videoList.sort(function (a, b) {
+        var heightA = getResolutionHeight(a.resolution);
+        var heightB = getResolutionHeight(b.resolution);
+        if (heightA !== heightB) {
+          return heightB - heightA;
+        }
+        return b.format_id.localeCompare(a.format_id);
+      });
+
+      allGroups = {
+        video: videoList,
+        audio: rawGroups.audio_only || []
+      };
+
+      if (allGroups.video && allGroups.video.length > 0) {
+        switchTab("video");
+      } else if (allGroups.audio && allGroups.audio.length > 0) {
+        switchTab("audio");
+      } else {
+        showError("No se encontraron formatos descargables para esta URL.");
+        return;
+      }
+
+      formatsSection.classList.remove("hidden");
+    } catch (err) {
+      showError("Error de conexión con el servidor.");
+    } finally {
+      setLoading(btnFetch, false);
+    }
+  }
+
+  // --- Video card ---
+  function renderVideoCard(data) {
+    videoTitle.textContent = data.title || "Sin título";
+    videoUploader.textContent = data.uploader || "";
+    videoDuration.textContent = data.duration_formatted || "";
+
+    if (data.thumbnail) {
+      videoThumb.src = data.thumbnail;
+      videoThumb.alt = data.title || "";
+    } else {
+      videoThumb.src = "";
+      videoThumb.alt = "";
+    }
+
+    videoCard.classList.remove("hidden");
+  }
+
+  // --- Tabs ---
+  function switchTab(group) {
+    activeGroup = group;
+    selectedFormat = null;
+    btnDownload.disabled = true;
+
+    document.querySelectorAll(".tab").forEach(function (t) {
+      var isActive = t.dataset.group === group;
+      t.classList.toggle("active", isActive);
+      t.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    renderFormats(allGroups[group] || []);
+  }
+
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      switchTab(t.dataset.group);
+    });
+  });
+
+  // --- Format table ---
+  function renderFormats(formats) {
+    formatsBody.innerHTML = "";
+
+    if (!formats || !formats.length) {
+      emptyGroup.classList.remove("hidden");
+      return;
+    }
+
+    emptyGroup.classList.add("hidden");
+
+    formats.forEach(function (fmt) {
+      var tr = document.createElement("tr");
+      tr.dataset.formatId = fmt.format_id;
+      tr.dataset.ext = fmt.ext;
+
+      var resText = esc(fmt.resolution);
+      if (fmt.fps && fmt.fps > 30) resText += " " + fmt.fps + "fps";
+
+      tr.innerHTML =
+        '<td class="col-radio"><span class="radio-dot"></span></td>' +
+        '<td><span class="res-label">' + resText + '</span></td>' +
+        '<td>' + esc(fmt.ext) + '</td>' +
+        '<td class="col-size">' + esc(formatSize(fmt.filesize)) + '</td>';
+
+      tr.addEventListener("click", function () { selectRow(tr); });
+      formatsBody.appendChild(tr);
+    });
+  }
+
+  function selectRow(tr) {
+    var prev = formatsBody.querySelector("tr.selected");
+    if (prev) prev.classList.remove("selected");
+    tr.classList.add("selected");
+    selectedFormat = { format_id: tr.dataset.formatId, ext: tr.dataset.ext };
+    btnDownload.disabled = false;
+  }
+
+  // --- Download (Async API polling) ---
+  async function startDownload() {
+    if (!selectedFormat || !currentUrl) return;
+
+    hideStatus();
+    progressSection.classList.remove("hidden");
+    progressBar.style.width = "0%";
+    progressPct.textContent = "0%";
+    progressLabel.textContent = "Iniciando descarga...";
+    progressSize.textContent = "";
+    progressSpeed.textContent = "";
+    progressEta.textContent = "";
+    setLoading(btnDownload, true);
+
+    try {
+      var res = await fetch("/api/download/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: currentUrl,
+          format_id: selectedFormat.format_id,
+        }),
+      });
+
+      var data = await res.json();
+
+      if (!res.ok) {
+        showStatus(data.error || "Error al iniciar la descarga.", "error");
+        progressSection.classList.add("hidden");
+        setLoading(btnDownload, false);
+        return;
+      }
+
+      pollProgress(data.download_id);
+    } catch (err) {
+      showStatus("Error de conexión.", "error");
+      progressSection.classList.add("hidden");
+      setLoading(btnDownload, false);
+    }
+  }
+
+  function pollProgress(downloadId) {
+    if (pollTimer) clearInterval(pollTimer);
+
+    pollTimer = setInterval(async function () {
+      try {
+        var res = await fetch("/api/download/status/" + downloadId);
+        var d = await res.json();
+
+        if (d.status === "downloading") {
+          var pct = d.percent || 0;
+          progressBar.style.width = pct + "%";
+          progressPct.textContent = pct.toFixed(1) + "%";
+          progressLabel.textContent = "Descargando...";
+
+          progressSize.textContent = d.total_bytes > 0
+            ? formatBytes(d.downloaded_bytes) + " / " + formatBytes(d.total_bytes)
+            : "";
+          progressSpeed.textContent = d.speed > 0
+            ? formatBytes(d.speed) + "/s"
+            : "";
+          progressEta.textContent = d.eta > 0
+            ? "ETA " + formatEta(d.eta)
+            : "";
+        }
+
+        if (d.status === "done") {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          progressBar.style.width = "100%";
+          progressPct.textContent = "100%";
+          progressLabel.textContent = "Completado";
+          progressSpeed.textContent = "";
+          progressEta.textContent = "";
+
+          var a = document.createElement("a");
+          a.href = "/api/download/file/" + downloadId;
+          a.download = "";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          showStatus("Descarga completada con éxito.", "success");
+          setLoading(btnDownload, false);
+        }
+
+        if (d.status === "error") {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          progressSection.classList.add("hidden");
+          showStatus(d.error || "Error durante el procesamiento.", "error");
+          setLoading(btnDownload, false);
+        }
+      } catch (err) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+        progressSection.classList.add("hidden");
+        showStatus("Error de conexión al consultar el estado.", "error");
+        setLoading(btnDownload, false);
+      }
+    }, 500);
+  }
+
+  // --- Events ---
+  btnFetch.addEventListener("click", fetchInfo);
+  btnDownload.addEventListener("click", startDownload);
+  urlInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); fetchInfo(); }
+  });
+
+})();

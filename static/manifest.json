@@ -1,0 +1,16 @@
+{
+  "name": "Velo",
+  "short_name": "Velo",
+  "description": "Descarga video y audio en alta definición desde múltiples plataformas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08080A",
+  "theme_color": "#08080A",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

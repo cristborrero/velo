@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment / Local Secrets
+.env
+.env.local
+
+# Temp downloads and test video files
+downloads/
+tmp/
+video/
+*.mp4
+*.m4a
+*.webm
+*.mkv
+
+# OS & Editor
+.DS_Store
+.vscode/
+.idea/
