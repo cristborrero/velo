@@ -623,33 +623,36 @@ body.mouse-active .mouse-spotlight {
   gap: var(--space-md);
 }
 
-.tab-bar {
+.tab-group {
   display: flex;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 4px;
+  gap: 8px;
 }
 
 .tab {
-  padding: 6px 16px;
-  font-size: 0.78rem;
+  height: 38px;
+  padding: 0 var(--space-md);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-3);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all var(--transition);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.tab:hover { color: var(--text-2); }
+.tab:hover {
+  color: var(--text-1);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
 .tab.active {
-  color: var(--accent-fg);
-  background: var(--accent);
+  color: var(--text-1);
+  background: var(--surface-hover);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
 }
 
 .webm-toggle-wrap {
@@ -859,20 +862,31 @@ tr.selected .radio-dot {
 }
 
 .preset-btn {
-  padding: 6px 16px;
+  height: 32px;
+  padding: 0 var(--space-md);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-sans);
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-2);
-  border-radius: var(--radius-full);
+  color: var(--text-3);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition);
 }
 
-.preset-btn:hover { border-color: var(--border-hover); color: var(--text-1); }
-.preset-btn.active { background: var(--text-1); color: var(--bg); border-color: var(--text-1); font-weight: 600; }
+.preset-btn:hover {
+  color: var(--text-1);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.preset-btn.active {
+  color: var(--text-1);
+  background: var(--surface-hover);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
 
 .trim-inputs-grid {
   display: grid;
