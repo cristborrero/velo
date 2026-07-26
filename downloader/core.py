@@ -118,6 +118,34 @@ class VideoInfo:
 ProgressCallback = Callable[[float, int, int, float, float], None]
 
 
+def _get_default_ydl_opts() -> Dict[str, Any]:
+    """Get default yt-dlp options with YouTube bot bypass player clients and cookies support."""
+    import os
+    opts: Dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb", "web"]
+            }
+        }
+    }
+
+    # Auto-detect cookies.txt in workspace or via env var
+    cookie_candidates = [
+        os.environ.get("YOUTUBE_COOKIES"),
+        os.environ.get("COOKIES_FILE"),
+        "cookies.txt",
+        os.path.join(os.path.dirname(__file__), "..", "cookies.txt"),
+    ]
+    for cpath in cookie_candidates:
+        if cpath and os.path.isfile(cpath):
+            opts["cookiefile"] = os.path.abspath(cpath)
+            break
+
+    return opts
+
+
 class VideoDownloader:
     """Wraps yt-dlp to extract format info and download videos."""
 
@@ -129,16 +157,18 @@ class VideoDownloader:
         Raises:
             ValueError: When the URL is invalid or the site is unsupported.
         """
-        opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "skip_download": True,
-        }
+        opts = _get_default_ydl_opts()
+        opts["skip_download"] = True
 
         try:
             with YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=False)
         except (DownloadError, Exception) as exc:
+            err_str = str(exc)
+            if "Sign in to confirm you're not a bot" in err_str or "bot" in err_str.lower():
+                raise ValueError(
+                    "YouTube ha solicitado verificación anti-bot. Se han activado los clientes de respaldo (Android/iOS). Si persiste, añade un archivo 'cookies.txt' en la raíz del proyecto."
+                ) from exc
             raise ValueError(
                 f"No se pudo extraer información del video: {exc}"
             ) from exc
@@ -253,12 +283,9 @@ class VideoDownloader:
 
         outtmpl = os.path.join(output_dir, "%(title)s.%(ext)s")
 
-        opts: Dict[str, Any] = {
-            "format": format_spec,
-            "outtmpl": outtmpl,
-            "quiet": True,
-            "no_warnings": True,
-        }
+        opts: Dict[str, Any] = _get_default_ydl_opts()
+        opts["format"] = format_spec
+        opts["outtmpl"] = outtmpl
 
         # Configure time range clipping if specified
         if start_seconds is not None or end_seconds is not None:
