@@ -12,9 +12,12 @@ ENV/
 .coverage
 htmlcov/
 
-# Environment / Local Secrets
+# Environment / Local Secrets & Cookies
 .env
 .env.local
+cookies.txt
+*.cookie
+*.cookies
 
 # Temp downloads and test video files
 downloads/
@@ -24,6 +27,7 @@ video/
 *.m4a
 *.webm
 *.mkv
+*.gif
 
 # OS & Editor
 .DS_Store

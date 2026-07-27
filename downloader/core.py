@@ -122,11 +122,12 @@ ProgressCallback = Callable[[float, int, int, float, float], None]
 
 
 def _get_default_ydl_opts() -> Dict[str, Any]:
-    """Get default yt-dlp options with cookies.txt auto-detection."""
+    """Get default yt-dlp options with cookies.txt auto-detection and player_client optimization."""
     import os
     opts: Dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
+        "extractor_args": {"youtube": {"player_client": ["ios", "android", "mweb", "web"]}},
     }
 
     # Auto-detect cookies.txt in workspace or via env var
@@ -164,17 +165,30 @@ class VideoDownloader:
                 info = ydl.extract_info(url, download=False)
         except (DownloadError, Exception) as exc:
             err_str = str(exc)
-            if "Sign in to confirm you're not a bot" in err_str or "bot" in err_str.lower():
-                # Retry with fallback player_client if blocked by bot check
-                fallback_opts = dict(opts)
-                fallback_opts["extractor_args"] = {"youtube": {"player_client": ["android", "web"]}}
-                try:
-                    with YoutubeDL(fallback_opts) as ydl_fb:
-                        info = ydl_fb.extract_info(url, download=False)
-                except Exception as fb_exc:
-                    raise ValueError(
-                        "YouTube ha solicitado verificación anti-bot. Añade un archivo 'cookies.txt' en la raíz del proyecto para bypass continuo."
-                    ) from fb_exc
+            if "Sign in to confirm you're not a bot" in err_str or "bot" in err_str.lower() or "confirm" in err_str.lower():
+                # Attempt 1: Browser cookie auto-extraction fallback (Chrome, Safari, Brave, Firefox)
+                for browser_name in ("chrome", "safari", "brave", "firefox", "edge"):
+                    try:
+                        b_opts = dict(opts)
+                        b_opts["cookiesfrombrowser"] = (browser_name,)
+                        with YoutubeDL(b_opts) as ydl_b:
+                            info = ydl_b.extract_info(url, download=False)
+                            if info:
+                                break
+                    except Exception:
+                        continue
+
+                if info is None:
+                    # Attempt 2: Alternative player_clients (tv, tv_embedded, mweb)
+                    try:
+                        fb_opts = dict(opts)
+                        fb_opts["extractor_args"] = {"youtube": {"player_client": ["tv", "tv_embedded", "mweb"]}}
+                        with YoutubeDL(fb_opts) as ydl_fb:
+                            info = ydl_fb.extract_info(url, download=False)
+                    except Exception as fb_exc:
+                        raise ValueError(
+                            "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto para bypass continuo."
+                        ) from fb_exc
             else:
                 raise ValueError(
                     f"No se pudo extraer información del video: {exc}"
