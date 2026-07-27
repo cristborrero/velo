@@ -2,8 +2,10 @@
 
   # ⚡ VELO (v2.0 SaaS Edition)
 
-  **Plataforma de Extracción y Procesamiento Multimedia de Alto Rendimiento**
+  **High-Performance Multimedia Processing & Extraction Platform**
 
+  [![English](https://img.shields.io/badge/Language-English-blue.svg?style=flat-square)](README.md)
+  [![Español](https://img.shields.io/badge/Idioma-Español-green.svg?style=flat-square)](README.es.md)
   [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg?style=flat-square)](LICENSE)
   [![Python](https://img.shields.io/badge/Python-3.11+-white.svg?style=flat-square&logo=python&logoColor=black)](https://www.python.org/)
   [![Flask](https://img.shields.io/badge/Framework-Flask-white.svg?style=flat-square&logo=flask&logoColor=black)](https://flask.palletsprojects.com/)
@@ -13,56 +15,58 @@
   [![Design](https://img.shields.io/badge/Design-SaaS%202--Column%20OLED-white.svg?style=flat-square)](static/style.css)
   [![Deploy](https://img.shields.io/badge/Deploy-Render%20%2F%20Docker-white.svg?style=flat-square&logo=render&logoColor=black)](render.yaml)
 
-  [Visión General](#-visión-general) • [Características](#-características-y-sistema-de-diseño) • [Arquitectura](#-arquitectura-del-sistema) • [Referencia API](#-referencia-de-la-api) • [Uso Local](#-instalación-y-uso-local) • [Despliegue](#-despliegue-en-producción)
+  **[ 🇺🇸 English ](README.md)** • **[ 🇪🇸 Español ](README.es.md)**
+
+  [Overview](#-overview) • [Features](#-features--design-system) • [Architecture](#-system-architecture) • [API Reference](#-api-reference) • [Local Usage](#-installation--local-usage) • [Deployment](#-production-deployment)
 
 </div>
 
 ---
 
-## 🌟 Visión General
+## 🌟 Overview
 
-**Velo** es una aplicación web de procesamiento y extracción multimedia orientada a la eficiencia y privacidad. Diseñada con una arquitectura SaaS minimalista de 2 columnas estilo **Linear, Raycast y ElevenLabs**, permite inspeccionar resoluciones nativas (hasta 4K/60fps), procesar listas de reproducción masivas en formato `.zip`, recortar fragmentos de video/audio con un editor visual interactivo estilo CapCut, exportar transcripciones y subtítulos (`.srt`, `.vtt`, `.txt`) y extraer audio en calidad máster MP3 320kbps / WAV.
-
----
-
-## ✨ Características y Sistema de Diseño
-
-### Capacidades del Producto
-- 🎬 **Resolución Nativa 4K & 1080p60**: Acceso a flujos de alta definición combinados o independientes sin pérdida de calidad.
-- 📦 **Descargas Masivas en Lote (`Batch Zip`)**: Extracción asíncrona de listas de reproducción y múltiples URLs empaquetadas en un único archivo comprimido `.zip`.
-- ✂️ **Editor Smart Clip (Estilo CapCut)**: Selector visual de doble rango (In/Out) con botones rápidos de atajo (`15s`, `30s`, `60s`, `Todo`).
-- 🎵 **Másters de Audio HD**: Salida de audio independiente en formato MP3 320kbps y WAV no comprimido.
-- 💬 **Exportador de Subtítulos**: Detección automática de transcripciones oficiales y automáticas descargables en `.srt`, `.vtt` y `.txt`.
-- 🎞️ **Conversor a GIF Animado**: Conversión con algoritmo `palettegen` de dos pasadas en FFmpeg para GIFs sin degradación de color.
-- ♿ **Accesibilidad ARIA & Teclado**: Soporte completo para lectores de pantalla con `role="radiogroup"`, `role="radio"` y estados dinámicos `aria-checked`.
-- 🛡️ **Seguridad Defense-in-Depth**: Inyección de cabeceras HTTP de seguridad (`nosniff`, `DENY`, `strict-origin-when-cross-origin`, `Permissions-Policy`).
-
-### Sistema de Diseño (Optimus OLED)
-- **Paleta de Colores**: Fondo negro casi puro (`#050505`), superficies en gris oscuro (`#0D0D0F`), bordes discretos (`#222226`) y acentos en verde neón positivo (`#2EEA83`).
-- **Tipografía**: Sans serif moderna con *Plus Jakarta Sans* para interfaz y *JetBrains Mono* para datos técnicos.
-- **Distribución de 2 Columnas**:
-  - **Columna Izquierda (65%)**: Controles de entrada de enlace, selección de grupo de descarga y panel de opciones avanzadas.
-  - **Columna Derecha (35%)**: Tarjeta de resumen flotante (*sticky*) con vista previa de miniatura, telemetría en tiempo real y lista de verificación antes del procesamiento.
+**Velo** is a privacy-first, high-efficiency web application for multimedia extraction and processing. Built with a minimal 2-column SaaS architecture inspired by **Linear, Raycast, and ElevenLabs**, Velo allows users to inspect native resolutions (up to 4K/60fps), process bulk playlist downloads into `.zip` archives, trim video/audio clips with a CapCut-style dual-range visual editor, export subtitles (`.srt`, `.vtt`, `.txt`), and extract master-quality audio in MP3 320kbps and uncompressed WAV.
 
 ---
 
-## 📐 Arquitectura del Sistema
+## ✨ Features & Design System
+
+### Product Capabilities
+- 🎬 **Native 4K & 1080p60 Resolution**: Direct access to combined or split high-definition media streams without quality loss.
+- 📦 **Bulk Batch Downloads (`Batch Zip`)**: Asynchronous extraction of playlists and multi-link batches packaged into a single compressed `.zip` file.
+- ✂️ **Smart Clip Editor (CapCut Style)**: Dual-range visual selector (In/Out) with quick preset shortcut buttons (`15s`, `30s`, `60s`, `Full`).
+- 🎵 **HD Audio Masters**: Independent audio extraction in MP3 320kbps and uncompressed WAV format.
+- 💬 **Subtitle Exporter**: Automatic detection of official and auto-generated transcripts exported directly to `.srt`, `.vtt`, and `.txt`.
+- 🎞️ **Animated GIF Converter**: Two-pass FFmpeg `palettegen` conversion for crisp GIFs without color degradation.
+- ♿ **ARIA Accessibility & Keyboard Support**: Full screen-reader support with `role="radiogroup"`, `role="radio"`, and dynamic `aria-checked` states.
+- 🛡️ **Defense-in-Depth Security**: HTTP security header injection (`nosniff`, `DENY`, `strict-origin-when-cross-origin`, `Permissions-Policy`).
+
+### Design System (Optimus OLED)
+- **Color Palette**: Deep dark OLED background (`#050505`), dark gray surfaces (`#0D0D0F`), discrete subtle borders (`#222226`), and positive neon green accents (`#2EEA83`).
+- **Typography**: Modern sans-serif with *Plus Jakarta Sans* for UI and *JetBrains Mono* for technical telemetry.
+- **2-Column Layout**:
+  - **Left Column (65%)**: Input URL controls, download group selector cards, and advanced options panel.
+  - **Right Column (35%)**: Floating *sticky* summary card featuring thumbnail preview, real-time telemetry, and pre-flight validation checklist.
+
+---
+
+## 📐 System Architecture
 
 ```
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │                 Cliente Web SaaS / PWA (App Shell)                     │
+  │                 SaaS Web Client / PWA (App Shell)                      │
   │     (HTML5 + Vanilla CSS OLED 2-Column + JavaScript ES6 Async API)     │
   └────────────────────────────────────┬────────────────────────────────────┘
                                        │
                                        ▼ REST API (Flask 3.x)
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │                        Servidor REST (app.py)                           │
+  │                        REST Server (app.py)                             │
   │   /api/info     /api/download/start     /api/subtitles/download         │
   │   /robots.txt   /sitemap.xml            /api/batch/start                │
   │   [HTTP Security Headers Middleware: nosniff, DENY, Referrer-Policy]    │
   └────────────────────────────────────┬────────────────────────────────────┘
                                        │
-                                       ▼ Motor de Extracción
+                                       ▼ Extraction Engine
   ┌─────────────────────────────────────────────────────────────────────────┐
   │               VideoDownloader Core (downloader/core.py)                 │
   │        yt-dlp Engine + FFmpeg Post-Processor Pipelines                  │
@@ -71,58 +75,58 @@
 
 ---
 
-## 🔌 Referencia de la API
+## 🔌 API Reference
 
-| Método | Endpoint | Descripción |
+| Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/info` | Extrae metadatos (título, miniatura, duración, subtítulos y formatos). |
-| `POST` | `/api/download/start` | Inicia la descarga asíncrona de un video/clip en segundo plano. |
-| `GET` | `/api/download/status/<id>` | Consulta la telemetría en tiempo real (porcentaje, MB/s, ETA). |
-| `GET` | `/api/download/file/<id>` | Descarga el archivo procesado al navegador. |
-| `POST` | `/api/subtitles/download` | Descarga transcripciones en formato `.srt`, `.vtt` o `.txt`. |
-| `POST` | `/api/convert/gif` | Exporta una sección del video a GIF animado de alta fidelidad. |
-| `POST` | `/api/batch/start` | Inicia la descarga en lote de múltiples URLs empaquetadas en `.zip`. |
-| `GET` | `/robots.txt` | Sirve las directivas de rastreo para motores de búsqueda. |
-| `GET` | `/sitemap.xml` | Sirve el mapa del sitio XML para indexación SEO. |
+| `POST` | `/api/info` | Extracts media metadata (title, thumbnail, duration, subtitles, and available formats). |
+| `POST` | `/api/download/start` | Starts asynchronous background download for a video/clip. |
+| `GET` | `/api/download/status/<id>` | Polls real-time download telemetry (percentage, MB/s, ETA). |
+| `GET` | `/api/download/file/<id>` | Transfers the processed file to the browser. |
+| `POST` | `/api/subtitles/download` | Exports transcripts in `.srt`, `.vtt`, or `.txt` format. |
+| `POST` | `/api/convert/gif` | Exports a video section into a high-fidelity animated GIF. |
+| `POST` | `/api/batch/start` | Starts batch download of multiple URLs compressed into a `.zip` file. |
+| `GET` | `/robots.txt` | Serves search engine crawling directives. |
+| `GET` | `/sitemap.xml` | Serves XML sitemap for SEO indexing. |
 
 ---
 
-## 🛠️ Instalación y Uso Local
+## 🛠️ Installation & Local Usage
 
-### Prerrequisitos
-- **Python**: 3.11 o superior.
-- **FFmpeg**: Requerido para fusión de audio/video y generación de GIFs.
+### Prerequisites
+- **Python**: 3.11 or higher.
+- **FFmpeg**: Required for media stream merging and GIF generation.
 
-### Pasos de Instalación
+### Installation Steps
 ```bash
-# 1. Clonar el repositorio
+# 1. Clone the repository
 git clone https://github.com/cristborrero/velo.git
 cd velo
 
-# 2. Crear y activar el entorno virtual
+# 2. Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 3. Instalar dependencias
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Iniciar el servidor local
+# 4. Start the local server
 python app.py
 ```
-Accede a la aplicación en `http://127.0.0.1:5001`.
+Access the application at `http://127.0.0.1:5001`.
 
-### Pruebas Automatizadas
+### Automated Testing
 ```bash
-# Ejecutar la suite completa con pytest (24/24 pruebas pasadas)
+# Run complete test suite with pytest (24/24 tests passing)
 .venv/bin/pytest tests/ -v
 ```
 
 ---
 
-## ☁️ Despliegue en Producción
+## ☁️ Production Deployment
 
-### Despliegue en Render / Docker
-El proyecto incluye configuración nativa para Render (`render.yaml`), Dockerfile y Procfile con servidor WSGI Gunicorn:
+### Docker / Render Deployment
+The project includes native configuration for Render (`render.yaml`), Dockerfile, and Procfile using Gunicorn WSGI server:
 
 ```dockerfile
 FROM python:3.11-slim
@@ -137,6 +141,6 @@ CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "app:app"]
 
 ---
 
-## 📜 Licencia
+## 📜 License
 
-Desarrollado bajo la licencia MIT.
+Distributed under the MIT License.
