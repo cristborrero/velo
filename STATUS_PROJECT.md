@@ -34,6 +34,13 @@
   - Extracción de audio en calidad máster MP3 320kbps y WAV sin compresión.
 - [x] **Descargas Masivas y Playlists (`Batch Download`)**:
   - Pestaña de entrada `Lista / Playlist (.ZIP)` para descargas en lote empaquetadas automáticamente en un archivo `.zip`.
+- [x] **Soporte Bilingüe i18n (Español / Inglés)**:
+  - Internacionalización cliente en tiempo real con conmutador flotante `ES | EN` en la barra de navegación.
+  - Detección automática del idioma del sistema y persistencia de preferencia en `localStorage`.
+- [x] **Rediseño de Marca Oficial (Isotipo V-Motion Soft & Wordmark)**:
+  - Incorporación de los archivos SVG oficiales (`logo-velo-new.svg` y `favicon-velo.svg`).
+- [x] **Copywriting Orientado a Beneficios**:
+  - Optimización de tarjetas Bento Grid enfocadas en valor de producto (Inspección inteligente & Vista previa en vivo).
 - [x] **PWA Instalable & Web Share Target**:
   - Service Worker nativo (`sw.js`) con almacenamiento en caché offline.
   - Receptor de enlaces `share_target` para recibir URLs compartidas desde dispositivos móviles o escritorio.
