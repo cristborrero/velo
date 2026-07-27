@@ -139,8 +139,10 @@ ProgressCallback = Callable[[float, int, int, float, float], None]
 
 
 def _get_default_ydl_opts() -> Dict[str, Any]:
-    """Get default yt-dlp options with cookies.txt auto-detection and player_client optimization."""
+    """Get default yt-dlp options with cookies auto-detection and player_client optimization."""
     import os
+    import tempfile
+
     opts: Dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
@@ -152,17 +154,30 @@ def _get_default_ydl_opts() -> Dict[str, Any]:
         "js_runtimes": {"node": {}},
     }
 
-    # Auto-detect cookies.txt in workspace or via env var
-    cookie_candidates = [
-        os.environ.get("YOUTUBE_COOKIES"),
-        os.environ.get("COOKIES_FILE"),
-        "cookies.txt",
-        os.path.join(os.path.dirname(__file__), "..", "cookies.txt"),
-    ]
-    for cpath in cookie_candidates:
-        if cpath and os.path.isfile(cpath):
-            opts["cookiefile"] = os.path.abspath(cpath)
-            break
+    # 1. Check YOUTUBE_COOKIES_TEXT env var (raw Netscape cookie string for cloud deployment)
+    cookies_text = os.environ.get("YOUTUBE_COOKIES_TEXT")
+    if cookies_text:
+        try:
+            tmp_cookie_file = os.path.join(tempfile.gettempdir(), "youtube_cookies.txt")
+            with open(tmp_cookie_file, "w", encoding="utf-8") as f:
+                f.write(cookies_text.strip() + "\n")
+            opts["cookiefile"] = tmp_cookie_file
+        except Exception:
+            pass
+
+    # 2. Check physical cookie file candidates if no cookiefile set yet
+    if "cookiefile" not in opts:
+        cookie_candidates = [
+            os.environ.get("YOUTUBE_COOKIES"),
+            os.environ.get("COOKIES_FILE"),
+            "cookies.txt",
+            os.path.join(os.path.dirname(__file__), "..", "cookies.txt"),
+            os.path.join(tempfile.gettempdir(), "youtube_cookies.txt"),
+        ]
+        for cpath in cookie_candidates:
+            if cpath and os.path.isfile(cpath):
+                opts["cookiefile"] = os.path.abspath(cpath)
+                break
 
     return opts
 
@@ -208,7 +223,7 @@ class VideoDownloader:
             )
 
             if needs_recovery:
-                # Attempt 1: Browser cookie auto-extraction fallback (Chrome, Safari, Brave, Firefox)
+                # Attempt 1: Browser cookie auto-extraction fallback (Chrome, Safari, Brave, Firefox, Edge)
                 for browser_name in ("chrome", "safari", "brave", "firefox", "edge"):
                     try:
                         b_opts = dict(opts)
@@ -221,20 +236,32 @@ class VideoDownloader:
                         continue
 
                 if info is None:
-                    # Attempt 2: Alternative player_clients (tv, tv_embedded, mweb)
-                    try:
-                        fb_opts = dict(opts)
-                        fb_opts["extractor_args"] = {"youtube": {"player_client": ["tv", "tv_embedded", "mweb"]}}
-                        with YoutubeDL(fb_opts) as ydl_fb:
-                            info = ydl_fb.extract_info(url, download=False)
-                    except Exception as fb_exc:
-                        if _is_transient_network_error(str(fb_exc)) or _is_transient_network_error(err_str):
-                            raise ValueError(
-                                f"La conexión con YouTube se cortó repetidamente: {fb_exc}"
-                            ) from fb_exc
+                    # Attempt 2: Multi-tier modern player_clients fallback matrix
+                    client_matrix = [
+                        ["android", "ios"],
+                        ["ios", "mweb"],
+                        ["web_creator", "mweb"],
+                        ["android"],
+                    ]
+                    for clients in client_matrix:
+                        try:
+                            fb_opts = dict(opts)
+                            fb_opts["extractor_args"] = {"youtube": {"player_client": clients}}
+                            with YoutubeDL(fb_opts) as ydl_fb:
+                                info = ydl_fb.extract_info(url, download=False)
+                                if info:
+                                    break
+                        except Exception:
+                            continue
+
+                if info is None:
+                    if _is_transient_network_error(err_str):
                         raise ValueError(
-                            "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto para bypass continuo."
-                        ) from fb_exc
+                            f"La conexión con YouTube se cortó repetidamente: {err_str}"
+                        ) from exc
+                    raise ValueError(
+                        "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto o configura la variable de entorno 'YOUTUBE_COOKIES_TEXT' en el servidor para bypass continuo."
+                    ) from exc
             else:
                 raise ValueError(
                     f"No se pudo extraer información del video: {exc}"
@@ -434,7 +461,38 @@ class VideoDownloader:
                         if os.path.exists(converted_path):
                             filepath = converted_path
         except (DownloadError, Exception) as exc:
-            raise ValueError(f"Error al descargar el video: {exc}") from exc
+            err_str = str(exc)
+            if "bot" in err_str.lower() or "confirm" in err_str.lower() or "sign in" in err_str.lower():
+                client_matrix = [
+                    ["android", "ios"],
+                    ["ios", "mweb"],
+                    ["web_creator", "mweb"],
+                ]
+                downloaded_ok = False
+                for clients in client_matrix:
+                    try:
+                        fb_opts = dict(opts)
+                        fb_opts["extractor_args"] = {"youtube": {"player_client": clients}}
+                        with YoutubeDL(fb_opts) as ydl_fb:
+                            info = ydl_fb.extract_info(url, download=True)
+                            if info:
+                                filepath = ydl_fb.prepare_filename(info)
+                                if is_audio_postproc and audio_codec:
+                                    base = os.path.splitext(filepath)[0]
+                                    converted_path = f"{base}.{audio_codec}"
+                                    if os.path.exists(converted_path):
+                                        filepath = converted_path
+                                downloaded_ok = True
+                                break
+                    except Exception:
+                        continue
+
+                if not downloaded_ok:
+                    raise ValueError(
+                        "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto o configura la variable de entorno 'YOUTUBE_COOKIES_TEXT' en el servidor para bypass continuo."
+                    ) from exc
+            else:
+                raise ValueError(f"Error al descargar el video: {exc}") from exc
 
         return filepath
 
