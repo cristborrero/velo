@@ -1,16 +1,27 @@
 {
-  "name": "Velo",
+  "name": "Velo - Downloader Pro",
   "short_name": "Velo",
-  "description": "Descarga video y audio en alta definición desde múltiples plataformas.",
+  "description": "Descarga video, audio HD, GIFs y subtítulos en alta definición sin publicidad.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#08080A",
-  "theme_color": "#08080A",
+  "orientation": "any",
+  "background_color": "#030303",
+  "theme_color": "#030303",
   "icons": [
     {
-      "src": "/static/favicon.svg",
+      "src": "/static/logo.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

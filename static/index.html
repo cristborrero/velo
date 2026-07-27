@@ -208,10 +208,17 @@
 
         <!-- Window App Core -->
         <div class="window-body">
-          <!-- Input Group -->
-          <div class="input-group" id="input-section">
-            <label for="url-input" class="sr-only">URL del video</label>
-            <div class="input-row">
+          <!-- Input Form Area -->
+          <div class="input-container">
+            <div class="input-header-row">
+              <div class="input-mode-tabs" role="tablist">
+                <button type="button" class="mode-tab active" data-mode="single">URL Única</button>
+                <button type="button" class="mode-tab" data-mode="batch">Lista / Playlist (.ZIP)</button>
+              </div>
+              <button id="btn-pwa-install" type="button" class="pwa-install-btn hidden">⚡ Instalar App</button>
+            </div>
+
+            <div id="single-input-wrap" class="input-row">
               <div class="input-icon-wrap">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </div>
@@ -227,6 +234,19 @@
                 <span class="btn-spinner" aria-hidden="true"></span>
               </button>
             </div>
+
+            <div id="batch-input-wrap" class="batch-input-row hidden">
+              <textarea
+                id="batch-url-input"
+                class="batch-textarea"
+                rows="4"
+                placeholder="Pega múltiples enlaces (uno por línea) o el enlace de una lista de reproducción..."
+              ></textarea>
+              <button id="btn-batch-fetch" type="button" class="batch-fetch-btn">
+                <span class="btn-label">Descargar Lote (.ZIP)</span>
+              </button>
+            </div>
+
             <p id="input-error" class="error-msg" role="alert" aria-live="polite"></p>
           </div>
 
@@ -278,6 +298,19 @@
               <p id="empty-group" class="empty-group hidden">No hay formatos disponibles en esta categoría.</p>
             </div>
 
+            <!-- Subtitles & Captions Module -->
+            <div id="subtitles-section" class="subtitles-section hidden">
+              <div class="subtitles-header">
+                <span class="subtitles-title">💬 Subtítulos & Transcripciones</span>
+                <div class="subtitles-controls">
+                  <select id="sub-lang-select" class="sub-select"></select>
+                  <button type="button" class="preset-btn" id="btn-sub-srt">.SRT</button>
+                  <button type="button" class="preset-btn" id="btn-sub-vtt">.VTT</button>
+                  <button type="button" class="preset-btn" id="btn-sub-txt">Texto (.TXT)</button>
+                </div>
+              </div>
+            </div>
+
             <!-- Horizontal Trim & Clip Bar (CapCut Style) -->
             <div id="trim-section" class="trim-section">
               <div class="trim-header">
@@ -286,7 +319,10 @@
                   <span class="trim-toggle-custom"></span>
                   <span class="trim-toggle-text">Recortar Clip (CapCut Trim)</span>
                 </label>
-                <span id="trim-badge" class="trim-badge hidden">Clip: 00:00 - 00:00 (0s)</span>
+                <div class="trim-header-right">
+                  <button type="button" id="btn-export-gif" class="preset-btn hidden">🎞️ Convertir a GIF</button>
+                  <span id="trim-badge" class="trim-badge hidden">Clip: 00:00 - 00:00 (0s)</span>
+                </div>
               </div>
 
               <div id="trim-controls" class="trim-controls hidden">

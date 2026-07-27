@@ -78,12 +78,14 @@ class VideoInfo:
         uploader: str,
         duration: int,
         formats: List[VideoFormat],
+        subtitles: Optional[List[Dict[str, str]]] = None,
     ) -> None:
         self.title = title
         self.thumbnail = thumbnail
         self.uploader = uploader
         self.duration = duration  # seconds
         self.formats = formats
+        self.subtitles = subtitles or []
 
     @property
     def duration_formatted(self) -> str:
@@ -106,6 +108,7 @@ class VideoInfo:
             "uploader": self.uploader,
             "duration": self.duration,
             "duration_formatted": self.duration_formatted,
+            "subtitles": self.subtitles,
             "groups": {
                 "combined": combined,
                 "video_only": video_only,
@@ -229,12 +232,31 @@ class VideoDownloader:
                 )
             )
 
+        # Parse subtitles / captions
+        subtitles_dict = info.get("subtitles") or {}
+        auto_captions = info.get("automatic_captions") or {}
+        sub_langs: List[Dict[str, str]] = []
+        seen_codes = set()
+
+        for code, sub_list in subtitles_dict.items():
+            if code not in seen_codes:
+                name = sub_list[0].get("name") if sub_list and isinstance(sub_list, list) else code
+                sub_langs.append({"code": code, "name": name or code, "type": "manual"})
+                seen_codes.add(code)
+
+        for code, sub_list in auto_captions.items():
+            if code not in seen_codes:
+                name = sub_list[0].get("name") if sub_list and isinstance(sub_list, list) else code
+                sub_langs.append({"code": code, "name": f"{name or code} (auto)", "type": "auto"})
+                seen_codes.add(code)
+
         return VideoInfo(
             title=title,
             thumbnail=thumbnail,
             uploader=uploader,
             duration=int(duration) if duration else 0,
             formats=formats,
+            subtitles=sub_langs,
         )
 
     # Keep backward compatibility
@@ -261,35 +283,58 @@ class VideoDownloader:
         import os
         import shutil
 
-        # Determine if the format needs an audio merge (video-only formats)
+        # Special Master Audio HD Formats
         format_spec = format_id
-        try:
-            info = self.get_info(url)
-            selected = [f for f in info.formats if f.format_id == format_id]
-            if selected and selected[0].category == "video_only":
-                has_ffmpeg = shutil.which("ffmpeg") is not None
-                if not has_ffmpeg:
-                    for p in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
-                        if os.path.isfile(p) and os.access(p, os.X_OK):
-                            os.environ["PATH"] = os.path.dirname(p) + os.pathsep + os.environ.get("PATH", "")
-                            has_ffmpeg = True
-                            break
-                if not has_ffmpeg:
-                    raise ValueError(
-                        "Esta calidad de video requiere 'ffmpeg' instalado en el servidor para poder combinarla con audio."
-                    )
-                format_spec = f"{format_id}+bestaudio/best"
-        except ValueError:
-            raise
-        except Exception:
-            # Fallback to the raw format_id if metadata extraction fails
-            pass
+        is_audio_postproc = False
+        audio_codec = ""
+        audio_quality = ""
+
+        if format_id == "mp3_320k":
+            format_spec = "bestaudio/best"
+            is_audio_postproc = True
+            audio_codec = "mp3"
+            audio_quality = "320"
+        elif format_id == "wav":
+            format_spec = "bestaudio/best"
+            is_audio_postproc = True
+            audio_codec = "wav"
+            audio_quality = "0"
+        else:
+            # Determine if the format needs an audio merge (video-only formats)
+            try:
+                info = self.get_info(url)
+                selected = [f for f in info.formats if f.format_id == format_id]
+                if selected and selected[0].category == "video_only":
+                    has_ffmpeg = shutil.which("ffmpeg") is not None
+                    if not has_ffmpeg:
+                        for p in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
+                            if os.path.isfile(p) and os.access(p, os.X_OK):
+                                os.environ["PATH"] = os.path.dirname(p) + os.pathsep + os.environ.get("PATH", "")
+                                has_ffmpeg = True
+                                break
+                    if not has_ffmpeg:
+                        raise ValueError(
+                            "Esta calidad de video requiere 'ffmpeg' instalado en el servidor para poder combinarla con audio."
+                        )
+                    format_spec = f"{format_id}+bestaudio/best"
+            except ValueError:
+                raise
+            except Exception:
+                # Fallback to the raw format_id if metadata extraction fails
+                pass
 
         outtmpl = os.path.join(output_dir, "%(title)s.%(ext)s")
 
         opts: Dict[str, Any] = _get_default_ydl_opts()
         opts["format"] = format_spec
         opts["outtmpl"] = outtmpl
+
+        if is_audio_postproc:
+            opts["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": audio_codec,
+                "preferredquality": audio_quality,
+            }]
 
         # Configure time range clipping if specified
         if start_seconds is not None or end_seconds is not None:
@@ -322,7 +367,158 @@ class VideoDownloader:
                 info = ydl.extract_info(url, download=True)
                 if info:
                     filepath = ydl.prepare_filename(info)
+                    if is_audio_postproc and audio_codec:
+                        # Fix extension if ffmpeg audio extraction changed it
+                        base = os.path.splitext(filepath)[0]
+                        converted_path = f"{base}.{audio_codec}"
+                        if os.path.exists(converted_path):
+                            filepath = converted_path
         except (DownloadError, Exception) as exc:
             raise ValueError(f"Error al descargar el video: {exc}") from exc
 
         return filepath
+
+    def download_subtitles(
+        self,
+        url: str,
+        lang: str = "es",
+        fmt: str = "srt",
+        output_dir: str = "/tmp",
+    ) -> str:
+        """Download subtitle transcript in .srt, .vtt, or .txt format."""
+        import os
+        import glob
+
+        opts = _get_default_ydl_opts()
+        opts["skip_download"] = True
+        opts["writesubtitles"] = True
+        opts["writeautomaticsub"] = True
+        opts["subtitleslangs"] = [lang, "es", "en"]
+        opts["subtitlesformat"] = "vtt/srt/best"
+        opts["outtmpl"] = os.path.join(output_dir, "%(title)s.%(ext)s")
+
+        try:
+            with YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                title = info.get("title") or "subtitles"
+        except Exception as exc:
+            raise ValueError(f"No se pudieron extraer subtítulos: {exc}") from exc
+
+        # Find extracted subtitle file
+        sub_files = glob.glob(os.path.join(output_dir, f"{title}*.vtt")) + glob.glob(os.path.join(output_dir, f"{title}*.srt"))
+        if not sub_files:
+            sub_files = glob.glob(os.path.join(output_dir, "*.vtt")) + glob.glob(os.path.join(output_dir, "*.srt"))
+
+        if not sub_files:
+            raise ValueError(f"No se encontraron subtítulos disponibles en el idioma seleccionado.")
+
+        sub_path = sub_files[0]
+
+        # Convert to plain text transcript if requested
+        if fmt == "txt":
+            txt_path = sub_path.rsplit(".", 1)[0] + ".txt"
+            with open(sub_path, "r", encoding="utf-8", errors="ignore") as f_in:
+                lines = f_in.readlines()
+            clean_lines = []
+            for line in lines:
+                l = line.strip()
+                if not l or l.startswith("WEBVTT") or "-->" in l or l.isdigit():
+                    continue
+                if l not in clean_lines:
+                    clean_lines.append(l)
+            with open(txt_path, "w", encoding="utf-8") as f_out:
+                f_out.write("\n".join(clean_lines))
+            return txt_path
+
+        return sub_path
+
+    def export_gif(
+        self,
+        url: str,
+        start_seconds: float = 0.0,
+        end_seconds: float = 5.0,
+        output_dir: str = "/tmp",
+    ) -> str:
+        """Export video section to high quality animated GIF using FFmpeg palettegen."""
+        import os
+        import subprocess
+
+        video_path = self.download(url, "best", output_dir=output_dir, start_seconds=start_seconds, end_seconds=end_seconds)
+        if not os.path.exists(video_path):
+            raise ValueError("No se pudo obtener el clip de video para convertir a GIF.")
+
+        gif_path = video_path.rsplit(".", 1)[0] + ".gif"
+        palette_path = video_path.rsplit(".", 1)[0] + "_palette.png"
+
+        try:
+            cmd1 = [
+                "ffmpeg", "-y", "-i", video_path,
+                "-vf", "fps=15,scale=480:-1:flags=lanczos,palettegen",
+                palette_path
+            ]
+            subprocess.run(cmd1, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            cmd2 = [
+                "ffmpeg", "-y", "-i", video_path, "-i", palette_path,
+                "-filter_complex", "fps=15,scale=480:-1:flags=lanczos[x];[x][1:v]paletteuse",
+                gif_path
+            ]
+            subprocess.run(cmd2, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            if os.path.exists(palette_path):
+                os.remove(palette_path)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+
+            return gif_path
+        except Exception:
+            try:
+                cmd_fb = ["ffmpeg", "-y", "-i", video_path, "-vf", "fps=12,scale=360:-1", gif_path]
+                subprocess.run(cmd_fb, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                return gif_path
+            except Exception as exc:
+                raise ValueError(f"Error al generar el GIF animado: {exc}") from exc
+
+    def download_batch(
+        self,
+        urls: List[str],
+        format_id: str = "best",
+        output_dir: str = "/tmp",
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> str:
+        """Download multiple URLs / Playlists and compress output files into a single .zip archive."""
+        import os
+        import zipfile
+        import time
+
+        batch_id = f"velo_batch_{int(time.time())}"
+        batch_dir = os.path.join(output_dir, batch_id)
+        os.makedirs(batch_dir, exist_ok=True)
+
+        downloaded_files: List[str] = []
+        total_urls = len(urls)
+
+        for i, url in enumerate(urls, start=1):
+            u = url.strip()
+            if not u:
+                continue
+            try:
+                fp = self.download(u, format_id, output_dir=batch_dir)
+                if os.path.exists(fp):
+                    downloaded_files.append(fp)
+            except Exception:
+                pass
+            if progress_callback:
+                progress_callback(float(i / total_urls * 100), i, total_urls, 0.0, 0.0)
+
+        if not downloaded_files:
+            raise ValueError("No se pudo descargar ningún video de la lista proporcionada.")
+
+        zip_path = os.path.join(output_dir, f"{batch_id}.zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file in downloaded_files:
+                zipf.write(file, os.path.basename(file))
+
+        return zip_path

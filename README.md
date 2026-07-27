@@ -1,179 +1,131 @@
 <div align="center">
 
-  # ⚡ Velo — High-Speed Multimedia Extraction Platform
+  # ⚡ VELO (v3.0.0 Pro)
 
-  <p><b>Plataforma web de alto rendimiento y arquitectura limpia para la inspección y descarga multimedia directa en calidad original.</b></p>
+  **Descargador de Video, Audio HD, GIF Animados y Subtítulos de Nivel Enterprise**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-  [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-007ACC?logo=python&logoColor=white)](https://python.org)
-  [![Flask](https://img.shields.io/badge/Framework-Flask-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-  [![Tests: 17 Passed](https://img.shields.io/badge/Tests-17%20Passed-10B981.svg)](tests/)
-  [![Design: Vercel / Linear](https://img.shields.io/badge/Design-Vercel%2FLinear%20Optimus-030303?logo=vercel&logoColor=white)](static/style.css)
-  [![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render&logoColor=black)](https://render.com)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg?style=flat-square)](LICENSE)
+  [![Python](https://img.shields.io/badge/Python-3.11+-white.svg?style=flat-square&logo=python&logoColor=black)](https://www.python.org/)
+  [![Flask](https://img.shields.io/badge/Framework-Flask-white.svg?style=flat-square&logo=flask&logoColor=black)](https://flask.palletsprojects.com/)
+  [![PWA Ready](https://img.shields.io/badge/PWA-Installable-white.svg?style=flat-square&logo=pwa&logoColor=black)](/sw.js)
+  [![Build Status](https://img.shields.io/badge/Tests-24%2F24%20PASSED-brightgreen.svg?style=flat-square)](tests/)
+  [![Design](https://img.shields.io/badge/Design-Optimus%20OLED-white.svg?style=flat-square)](static/style.css)
+  [![Deploy](https://img.shields.io/badge/Deploy-Render%20%2F%20Docker-white.svg?style=flat-square&logo=render&logoColor=black)](render.yaml)
 
-  <br />
-
-  <a href="#-demostración-y-sistema-de-diseño">Ver Interfaz</a> •
-  <a href="#-características-destacadas">Características</a> •
-  <a href="#-arquitectura-del-sistema">Arquitectura</a> •
-  <a href="#-instalación-y-uso-local">Uso Local</a> •
-  <a href="#-despliegue-en-producción-render">Despliegue Render</a>
+  [Visión General](#-visión-general) • [Características](#-características-clave) • [Arquitectura](#-arquitectura-del-sistema) • [Referencia API](#-referencia-de-la-api) • [Uso Local](#-instalación-y-uso-local) • [Despliegue](#-despliegue-en-producción)
 
 </div>
 
 ---
 
-## 🎯 Visión General
+## 🌟 Visión General
 
-**Velo** combina la potencia del motor de extracción universal `yt-dlp` y procesamiento de streams `FFmpeg` con una interfaz web ultrarrápida diseñada bajo los estándares estéticos de **Vercel & Linear (Plantilla Optimus)**. 
-
-Permite inspeccionar metadatos y descargar contenidos en resolución original (**4K, 1080p, 60fps**) y audios de alta fidelidad (**MP3, M4A, Opus**) desde más de 1,000 plataformas (YouTube, TikTok, Instagram, Twitter/X, Vimeo, Twitch, entre otras), sin anuncios, sin registros y sin límites de velocidad.
+**Velo** es un descargador multiplataforma de vanguardia diseñado con arquitectura minimalista OLED. Permite extraer contenido audiovisual en máxima resolución (4K/HD), recortar clips con un selector de tiempo de alta precisión estilo CapCut, convertir videos a GIF animado de alta fidelidad, extraer audio en calidad máster MP3 320kbps/WAV, descargar transcripciones y procesar listas de reproducción masivas en formato `.zip`.
 
 ---
 
-## 🎨 Demostración y Sistema de Diseño
+## ✨ Características Clave
 
-El apartado visual sigue una filosofía de diseño minimalista de alto nivel:
-
-- **Fondo OLED `#030303` con Iluminación Interactiva**: Retícula técnica ambiental con resplandor radial dinámico (`mouse spotlight`) que sigue la posición exacta del cursor.
-- **Barra de Navegación Flotante (`Floating Island Nav`)**: Con desenfoque de fondo de micro-precisión (`backdrop-filter: blur(24px)`).
-- **Marco de Aplicación Embebido**: La herramienta de descarga está integrada directamente en el Hero dentro de una ventana de aplicación macOS con indicador de luz `border-beam`.
-- **Bento Grid Asimétrico**: Organización de características principales en tarjetas de densidad variable.
-- **Módulo de Donaciones de PayPal**: Componente integrado sin fricción con renderizado de contenedor oscuro.
-- **Español Neutro**: Redacción técnica profesional libre de modismos regionales.
-
----
-
-## ⚡ Características Destacadas
-
-- 🔍 **Inspección Instantánea de Metadatos**: Extrae título, creador, duración y miniatura sin descargar el contenido completo.
-- 🎬 **Filtrado Inteligente de Formatos**:
-  - **Video + Audio**: Formatos HD/4K combinados listos para reproducir.
-  - **Solo Audio**: Extracción directa de pistas musicales y podcasts.
-- ⚡ **Procesamiento Asíncrono no Bloqueante**: Ejecución de descargas en hilos de fondo (`threading.Thread`) para evitar *timeouts* HTTP en servidores web.
-- 📊 **Telemetría en Tiempo Real**: Barra de progreso con indicador de porcentaje, bytes transferidos/totales, velocidad de red (`MB/s`) y tiempo restante estimado (ETA).
-- 💻 **Interfaz Dual (CLI & Web)**: Servidor web Flask y menú interactivo de terminal.
-- 🧪 **Suite de Pruebas de Calidad**: Cobertura unitaria y de integración automatizada mediante `pytest` (17/17 pruebas pasadas).
+- 🎬 **Extracción en Máxima Calidad**: Soporte para formatos combinados y separados (hasta 4K/60fps) mediante combinación asíncrona con `FFmpeg`.
+- ✂️ **Recorte de Clips CapCut Trim**: Selector visual de doble rango (In/Out) con ajustes rápidos (`15s`, `30s`, `60s`, `Completo`).
+- 💬 **Extractor de Subtítulos**: Descarga de transcripciones automáticas y oficiales en `.srt`, `.vtt` y texto plano `.txt`.
+- 🎞️ **Exportador a GIF Animado**: Conversión con filtros `palettegen` y `paletteuse` de dos pasadas para GIFs nítidos sin degradación de color.
+- 🎵 **Audio HD Máster**: Salida en MP3 320kbps y WAV no comprimido.
+- 📦 **Descarga Masiva en Lote (`Batch Zip`)**: Descarga paralela de listas de reproducción y múltiples enlaces comprimidos automáticamente en `.zip`.
+- ⚡ **PWA Instalable & Web Share Target**: Instalación como app nativa en dispositivos móviles/escritorio y recepción directa de enlaces compartidos desde otras aplicaciones.
+- 🖤 **Diseño Optimus OLED**: Interfaz en modo oscuro profundo con spotlight reactivo al cursor, isla de navegación flotante y respuesta táctil sutil.
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 📐 Arquitectura del Sistema
 
 ```
-                        ┌──────────────┐
-                        │   main.py    │ (CLI Entry Point)
-                        └──────┬───────┘
-                               │
-                        ┌──────▼───────┐
-                        │    cli.py    │ (Interactive Menu)
-                        └──────┬───────┘
-                               │
-┌────────────────────┐  ┌──────▼───────┐  ┌──────────────┐
-│ static/index.html  │  │    app.py    │  │  tests/      │ (Pytest Suite)
-│ static/style.css   │◄─┤ (Flask Server)│  └──────┬───────┘
-│ static/app.js      │  └──────┬───────┘          │
-└────────────────────┘         │                  │
-                        ┌──────▼───────┐◄─────────┘
-                        │   core.py    │ (VideoDownloader Engine)
-                        └──────┬───────┘
-                               │
-                        ┌──────▼───────┐
-                        │  yt-dlp API  │ + FFmpeg (Merging)
-                        └──────────────┘
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    Cliente Web / PWA (App Shell)             │
+  │     (HTML5 + Vanilla CSS Optimus OLED + JavaScript ES6)     │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │
+                                 ▼ REST API (Flask 3.x)
+  ┌─────────────────────────────────────────────────────────────┐
+  │                 Servidor REST (app.py)                       │
+  │   /api/info   /api/download/start   /api/subtitles/download   │
+  │   /sw.js      /api/convert/gif      /api/batch/start         │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │
+                                 ▼ Motor de Extracción
+  ┌─────────────────────────────────────────────────────────────┐
+  │            VideoDownloader Core (downloader/core.py)        │
+  │        yt-dlp Engine + FFmpeg Post-Processor Pipelines        │
+  └─────────────────────────────────────────────────────────────┘
 ```
 
-### Especificación de la API REST
+---
+
+## 🔌 Referencia de la API
 
 | Método | Endpoint | Descripción |
-|---|---|---|
-| `GET` | `/` | Sirve la Landing Page web unificada (`index.html`) |
-| `POST` | `/api/info` | Retorna metadatos y listas de formatos categorizados |
-| `POST` | `/api/download/start` | Arranca la descarga en segundo plano y retorna `download_id` |
-| `GET` | `/api/download/status/<id>` | Consulta el progreso, velocidad y estado (`downloading`, `done`, `error`) |
-| `GET` | `/api/download/file/<id>` | Transmite el archivo final descargado hacia el navegador |
+| :--- | :--- | :--- |
+| `POST` | `/api/info` | Extrae metadatos (título, miniatura, duración, subtítulos y formatos). |
+| `POST` | `/api/download/start` | Inicia la descarga asíncrona de un video/clip en segundo plano. |
+| `GET` | `/api/download/status/<id>` | Consulta la telemetría en tiempo real (porcentaje, MB/s, ETA). |
+| `GET` | `/api/download/file/<id>` | Descarga el archivo procesado al cliente. |
+| `POST` | `/api/subtitles/download` | Descarga transcripciones en formato `.srt`, `.vtt` o `.txt`. |
+| `POST` | `/api/convert/gif` | Exporta una sección del video a GIF animado de alta fidelidad. |
+| `POST` | `/api/batch/start` | Inicia la descarga en lote de múltiples URLs empaquetadas en `.zip`. |
+| `GET` | `/sw.js` | Sirve el Service Worker para soporte PWA Offline. |
 
 ---
 
-## 🛠️ Requisitos del Sistema
+## 🛠️ Instalación y Uso Local
 
-- **Python**: 3.8 o 3.11+
-- **FFmpeg**: Requerido en el sistema para la combinación de flujos de video y audio separados en alta definición.
+### Prerrequisitos
+- **Python**: 3.11 o superior.
+- **FFmpeg**: Requerido para fusión de formatos de video/audio y generación de GIFs.
 
----
-
-## 💻 Instalación y Uso Local
-
-1. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/cristborrero/velo.git
-   cd velo
-   ```
-
-2. **Crear e iniciar el entorno virtual**:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. **Instalar dependencias**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Iniciar el servidor web**:
-   ```bash
-   python app.py
-   ```
-   Accede en tu navegador a: `http://localhost:5001`
-
-5. **Iniciar la herramienta de terminal (CLI)**:
-   ```bash
-   python main.py
-   ```
-
-6. **Ejecutar la suite de pruebas automatizadas**:
-   ```bash
-   pytest tests/ -v
-   ```
-
----
-
-## 🚀 Despliegue en Producción (Render)
-
-El proyecto incluye configuración nativa para **Render Blueprint** (`render.yaml`), **Procfile** (Gunicorn) y **Dockerfile**.
-
-### Despliegue Unificado con Render Blueprint (Recomendado)
-
-1. Ingresa a tu panel en **[Render.com](https://dashboard.render.com)**.
-2. Haz clic en **New +** y selecciona **Blueprint**.
-3. Conecta el repositorio `cristborrero/velo`.
-4. Render detectará automáticamente `render.yaml` y ejecutará los siguientes pasos:
-   - Instalación del paquete de sistema `ffmpeg`.
-   - Instalación de dependencias Python.
-   - Ejecución del servidor WSGI `gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 app:app`.
-
----
-
-## 🐳 Despliegue con Docker
-
-Construye y ejecuta el contenedor Docker en cualquier entorno (Railway, Fly.io, GCP Cloud Run, AWS):
-
+### Pasos de Instalación
 ```bash
-# Construir la imagen Docker
-docker build -t velo-app .
+# 1. Clonar el repositorio
+git clone https://github.com/cristborrero/velo.git
+cd velo
 
-# Ejecutar el contenedor
-docker run -d -p 5000:5000 --name velo velo-app
+# 2. Crear y activar el entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Instalar dependencias
+pip install -r requirements.txt
+
+# 4. Iniciar el servidor local
+python app.py
+```
+Accede a la aplicación en `http://127.0.0.1:5001`.
+
+### Pruebas Automatizadas
+```bash
+# Ejecutar la suite completa con pytest (24/24 pruebas)
+pytest tests/ -v
 ```
 
 ---
 
-## 💖 Donaciones y Código Abierto
+## ☁️ Despliegue en Producción
 
-Velo es un proyecto de código abierto libre de publicidad y suscripciones. Incorpora integración con donaciones voluntarias de PayPal para contribuir al mantenimiento de infraestructura.
+### Despliegue con Docker / Render
+El proyecto incluye configuración nativa para Render (`render.yaml`), Dockerfile y Procfile con servidor WSGI Gunicorn:
+
+```dockerfile
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 5001
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "app:app"]
+```
 
 ---
 
-## 📄 Licencia
+## 📜 Licencia
 
-Este proyecto está bajo la Licencia **MIT** — Libre para aprendizaje, modificación y distribución.
+Desarrollado bajo la licencia MIT.

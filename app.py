@@ -10,7 +10,7 @@ import threading
 import uuid
 from typing import Any, Dict
 
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory, make_response
 
 from downloader.core import VideoDownloader
 
@@ -37,7 +37,6 @@ def check_ffmpeg() -> bool:
     return False
 
 _HAS_FFMPEG = check_ffmpeg()
-
 
 
 @app.route("/")
@@ -223,5 +222,121 @@ def download_video_legacy():
     return send_file(files[0], as_attachment=True, download_name=os.path.basename(files[0]))
 
 
+@app.route("/sw.js")
+def serve_sw():
+    """Serve Service Worker file for PWA support with correct root scope header."""
+    res = make_response(send_from_directory("static", "sw.js"))
+    res.headers["Content-Type"] = "application/javascript"
+    res.headers["Service-Worker-Allowed"] = "/"
+    return res
+
+
+@app.route("/api/subtitles/download", methods=["POST"])
+def download_subtitles_endpoint():
+    """Endpoint to download subtitle files (.srt, .vtt, .txt)."""
+    data = request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    lang = (data.get("lang") or "es").strip()
+    fmt = (data.get("fmt") or "srt").strip()
+
+    if not url:
+        return jsonify({"error": "Falta la URL del video."}), 400
+
+    sub_dir = os.path.join(_DOWNLOAD_DIR, "subtitles_" + uuid.uuid4().hex[:8])
+    os.makedirs(sub_dir, exist_ok=True)
+
+    try:
+        sub_path = _dl.download_subtitles(url, lang=lang, fmt=fmt, output_dir=sub_dir)
+        return send_file(
+            sub_path,
+            as_attachment=True,
+            download_name=os.path.basename(sub_path),
+        )
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/convert/gif", methods=["POST"])
+def convert_gif_endpoint():
+    """Endpoint to export a video section to animated GIF."""
+    data = request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    start_seconds = float(data.get("start_seconds") or 0.0)
+    end_seconds = float(data.get("end_seconds") or 5.0)
+
+    if not url:
+        return jsonify({"error": "Falta la URL del video."}), 400
+
+    gif_dir = os.path.join(_DOWNLOAD_DIR, "gif_" + uuid.uuid4().hex[:8])
+    os.makedirs(gif_dir, exist_ok=True)
+
+    try:
+        gif_path = _dl.export_gif(url, start_seconds=start_seconds, end_seconds=end_seconds, output_dir=gif_dir)
+        return send_file(
+            gif_path,
+            as_attachment=True,
+            download_name=os.path.basename(gif_path),
+        )
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/batch/start", methods=["POST"])
+def batch_start_endpoint():
+    """Start an async batch/playlist download for multiple URLs into a zip archive."""
+    data = request.get_json(silent=True) or {}
+    urls = data.get("urls") or []
+    format_id = (data.get("format_id") or "best").strip()
+
+    if isinstance(urls, str):
+        urls = [u.strip() for u in urls.splitlines() if u.strip()]
+
+    if not urls:
+        return jsonify({"error": "No se proporcionaron URLs para descargar."}), 400
+
+    download_id = "batch_" + uuid.uuid4().hex[:12]
+    dl_dir = os.path.join(_DOWNLOAD_DIR, download_id)
+    os.makedirs(dl_dir, exist_ok=True)
+
+    _downloads[download_id] = {
+        "status": "downloading",
+        "percent": 0.0,
+        "downloaded_bytes": 0,
+        "total_bytes": len(urls),
+        "speed": 0.0,
+        "eta": 0.0,
+        "filepath": "",
+        "error": "",
+    }
+
+    def _run() -> None:
+        def _on_progress(pct: float, current: int, total: int, speed: float, eta: float) -> None:
+            _downloads[download_id].update({
+                "percent": round(pct, 1),
+                "downloaded_bytes": current,
+                "total_bytes": total,
+            })
+
+        try:
+            zip_path = _dl.download_batch(urls=urls, format_id=format_id, output_dir=dl_dir, progress_callback=_on_progress)
+            _downloads[download_id].update({
+                "status": "done",
+                "percent": 100.0,
+                "filepath": zip_path,
+            })
+        except Exception as exc:
+            _downloads[download_id].update({
+                "status": "error",
+                "error": str(exc),
+            })
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    return jsonify({"download_id": download_id})
+
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get("PORT", 5001))
+    print(f"Iniciando servidor Velo en http://127.0.0.1:{port}")
+    app.run(host="0.0.0.0", port=port, debug=True)

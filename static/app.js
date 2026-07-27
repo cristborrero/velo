@@ -357,19 +357,38 @@
         return m ? parseInt(m[1], 10) : 0;
       }
 
-      videoList.sort(function (a, b) {
-        var heightA = getResolutionHeight(a.resolution);
-        var heightB = getResolutionHeight(b.resolution);
-        if (heightA !== heightB) {
-          return heightB - heightA;
-        }
-        return b.format_id.localeCompare(a.format_id);
-      });
+      // Master Audio Options
+      var audioList = rawGroups.audio_only || [];
+      audioList.unshift(
+        { format_id: "mp3_320k", resolution: "audio only", ext: "mp3 (320k)", filesize: "Máster HD", category: "audio_only" },
+        { format_id: "wav", resolution: "audio only", ext: "wav", filesize: "Sin compresión", category: "audio_only" }
+      );
 
       allGroups = {
         video: videoList,
-        audio: rawGroups.audio_only || []
+        audio: audioList
       };
+
+      // Populate Subtitles dropdown if available
+      var subs = data.subtitles || [];
+      if (subLangSelect) {
+        subLangSelect.innerHTML = "";
+        if (subs.length > 0) {
+          subs.forEach(function (s) {
+            var opt = document.createElement("option");
+            opt.value = s.code;
+            opt.textContent = s.name;
+            subLangSelect.appendChild(opt);
+          });
+          if (subtitlesSection) subtitlesSection.classList.remove("hidden");
+        } else {
+          if (subtitlesSection) subtitlesSection.classList.add("hidden");
+        }
+      }
+
+      if (btnExportGif) {
+        btnExportGif.classList.remove("hidden");
+      }
 
       if (allGroups.video && allGroups.video.length > 0) {
         switchTab("video");
@@ -387,55 +406,167 @@
       setLoading(btnFetch, false);
     }
   }
+  var deferredPrompt = null;
+  var btnPwaInstall = document.getElementById("btn-pwa-install");
 
-  // --- Video card ---
-  function renderVideoCard(data) {
-    videoTitle.textContent = data.title || "Sin título";
-    videoUploader.textContent = data.uploader || "";
-    videoDuration.textContent = data.duration_formatted || "";
-
-    if (data.thumbnail) {
-      videoThumb.src = data.thumbnail;
-      videoThumb.alt = data.title || "";
-    } else {
-      videoThumb.src = "";
-      videoThumb.alt = "";
-    }
-
-    videoCard.classList.remove("hidden");
-  }
-
-  // --- Tabs ---
-  function switchTab(group) {
-    activeGroup = group;
-    selectedFormat = null;
-    btnDownload.disabled = true;
-
-    document.querySelectorAll(".tab").forEach(function (t) {
-      var isActive = t.dataset.group === group;
-      t.classList.toggle("active", isActive);
-      t.setAttribute("aria-selected", isActive ? "true" : "false");
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(function (reg) {
+        console.log("Velo Service Worker registrado:", reg.scope);
+      }).catch(function (err) {
+        console.warn("Error al registrar Service Worker:", err);
+      });
     });
-
-    renderFormats(allGroups[group] || []);
   }
 
-  document.querySelectorAll(".tab").forEach(function (t) {
-    t.addEventListener("click", function () {
-      if (t.dataset.group) {
-        switchTab(t.dataset.group);
-      }
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (btnPwaInstall) {
+      btnPwaInstall.classList.remove("hidden");
+    }
+  });
+
+  if (btnPwaInstall) {
+    btnPwaInstall.addEventListener("click", function () {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function (choice) {
+        if (choice.outcome === "accepted") {
+          console.log("PWA instalada por el usuario.");
+        }
+        deferredPrompt = null;
+        btnPwaInstall.classList.add("hidden");
+      });
+    });
+  }
+
+  // Web Share Target Query Params (?url=...)
+  var urlParams = new URLSearchParams(window.location.search);
+  var sharedUrl = urlParams.get("url") || urlParams.get("text");
+  if (sharedUrl && urlInput) {
+    urlInput.value = sharedUrl;
+    setTimeout(fetchInfo, 300);
+  }
+
+  // Input Mode Tabs (Single vs Batch)
+  var modeTabs = document.querySelectorAll(".mode-tab");
+  var singleWrap = document.getElementById("single-input-wrap");
+  var batchWrap = document.getElementById("batch-input-wrap");
+
+  modeTabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      modeTabs.forEach(function (t) { t.classList.remove("active"); });
+      tab.classList.add("active");
+      var isBatch = tab.dataset.mode === "batch";
+      if (singleWrap) singleWrap.classList.toggle("hidden", isBatch);
+      if (batchWrap) batchWrap.classList.toggle("hidden", !isBatch);
     });
   });
 
-  if (toggleWebM) {
-    toggleWebM.addEventListener("change", function () {
-      renderFormats(allGroups[activeGroup] || []);
+  // Batch Download Handler
+  var btnBatchFetch = document.getElementById("btn-batch-fetch");
+  var batchUrlInput = document.getElementById("batch-url-input");
+
+  if (btnBatchFetch && batchUrlInput) {
+    btnBatchFetch.addEventListener("click", async function () {
+      var raw = batchUrlInput.value.trim();
+      if (!raw) { showError("Por favor ingresa al menos una URL."); return; }
+      clearError();
+      hideStatus();
+      setLoading(btnBatchFetch, true);
+
+      try {
+        var res = await fetch("/api/batch/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls: raw, format_id: "best" }),
+        });
+        var data = await res.json();
+        if (!res.ok || data.error) {
+          showError(data.error || "Error al iniciar descarga en lote.");
+          return;
+        }
+        pollStatus(data.download_id);
+      } catch (err) {
+        showError("Error de conexión al procesar el lote.");
+      } finally {
+        setLoading(btnBatchFetch, false);
+      }
     });
   }
 
-  // --- Format table (Smart Filtering) ---
-  function renderFormats(formats) {
+  // Subtitles DOM Elements
+  var subtitlesSection = document.getElementById("subtitles-section");
+  var subLangSelect = document.getElementById("sub-lang-select");
+  var btnSubSrt = document.getElementById("btn-sub-srt");
+  var btnSubVtt = document.getElementById("btn-sub-vtt");
+  var btnSubTxt = document.getElementById("btn-sub-txt");
+  var btnExportGif = document.getElementById("btn-export-gif");
+
+  function downloadSubtitleFormat(fmt) {
+    if (!currentUrl) return;
+    var lang = subLangSelect ? subLangSelect.value : "es";
+    showStatus("Descargando subtítulos (" + fmt.toUpperCase() + ")...", "info");
+
+    fetch("/api/subtitles/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: currentUrl, lang: lang, fmt: fmt }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error("No se pudieron descargar los subtítulos.");
+      return res.blob();
+    }).then(function (blob) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "subtitles_" + lang + "." + fmt;
+      a.click();
+      hideStatus();
+    }).catch(function (err) {
+      showError(err.message);
+    });
+  }
+
+  if (btnSubSrt) btnSubSrt.addEventListener("click", function () { downloadSubtitleFormat("srt"); });
+  if (btnSubVtt) btnSubVtt.addEventListener("click", function () { downloadSubtitleFormat("vtt"); });
+  if (btnSubTxt) btnSubTxt.addEventListener("click", function () { downloadSubtitleFormat("txt"); });
+
+  // GIF Export Handler
+  if (btnExportGif) {
+    btnExportGif.addEventListener("click", async function () {
+      if (!currentUrl) return;
+      showStatus("Generando GIF animado con alta paleta de colores...", "info");
+      setLoading(btnExportGif, true);
+
+      try {
+        var res = await fetch("/api/convert/gif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: currentUrl,
+            start_seconds: trimStartSecs,
+            end_seconds: trimEndSecs
+          }),
+        });
+
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || "Error al exportar GIF.");
+        }
+
+        var blob = await res.blob();
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "clip_animado.gif";
+        a.click();
+        hideStatus();
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        setLoading(btnExportGif, false);
+      }
+    });
+  }
     formatsBody.innerHTML = "";
 
     if (!formats || !formats.length) {

@@ -1,5 +1,5 @@
-"""Tests for downloader.core — VideoDownloader."""
-
+import os
+from typing import Any
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -278,18 +278,38 @@ class TestDownload:
         assert progress_calls[1]["pct"] == 100.0
 
 
-# === Backward compatibility ===
+# === Subtitles, GIF Export & Batch Download Tests ===
 
-class TestLegacy:
-    """Ensure get_formats still works."""
+class TestNewFeatures:
+    """Tests for subtitles, GIF export, and Batch Zip download."""
 
     @patch("downloader.core.YoutubeDL")
-    def test_get_formats_returns_flat_list(self, mock_ydl_cls: MagicMock) -> None:
+    def test_subtitles_extraction(self, mock_ydl_cls: MagicMock) -> None:
+        info_dict = {
+            **FAKE_INFO_DICT,
+            "subtitles": {"es": [{"name": "Spanish"}]},
+            "automatic_captions": {"en": [{"name": "English"}]},
+        }
         instance = mock_ydl_cls.return_value.__enter__.return_value
-        instance.extract_info.return_value = FAKE_INFO_DICT
+        instance.extract_info.return_value = info_dict
 
         dl = VideoDownloader()
-        formats = dl.get_formats("https://example.com/video")
+        info = dl.get_info("https://example.com/video")
 
-        assert all(isinstance(f, VideoFormat) for f in formats)
-        assert len(formats) == 4  # excludes mhtml storyboard
+        assert len(info.subtitles) == 2
+        assert info.subtitles[0]["code"] == "es"
+        assert info.subtitles[1]["code"] == "en"
+
+    @patch("downloader.core.VideoDownloader.download")
+    def test_download_batch_creates_zip(self, mock_download: MagicMock, tmp_path: Any) -> None:
+        file1 = tmp_path / "video1.mp4"
+        file1.write_text("dummy video 1 content")
+
+        mock_download.return_value = str(file1)
+
+        dl = VideoDownloader()
+        zip_res = dl.download_batch(["https://example.com/v1"], format_id="best", output_dir=str(tmp_path))
+
+        assert zip_res.endswith(".zip")
+        assert os.path.exists(zip_res)
+
