@@ -172,6 +172,7 @@ def _get_default_ydl_opts() -> Dict[str, Any]:
             os.environ.get("COOKIES_FILE"),
             "cookies.txt",
             os.path.join(os.path.dirname(__file__), "..", "cookies.txt"),
+            os.path.join(os.path.dirname(__file__), "..", "assets", "cookies.txt"),
             os.path.join(tempfile.gettempdir(), "youtube_cookies.txt"),
         ]
         for cpath in cookie_candidates:

@@ -16,6 +16,7 @@ htmlcov/
 .env
 .env.local
 cookies.txt
+assets/cookies.txt
 *.cookie
 *.cookies
 
