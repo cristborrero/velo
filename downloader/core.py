@@ -11,6 +11,23 @@ from yt_dlp.utils import DownloadError, download_range_func
 # Extensions that are not real downloadable media
 _SKIP_EXTENSIONS = frozenset({"mhtml", "json"})
 
+# Substrings identifying a dropped/reset connection rather than a real bot block
+_TRANSIENT_NETWORK_MARKERS = (
+    "broken pipe",
+    "errno 32",
+    "errno 54",
+    "errno 104",
+    "connection reset",
+    "connection aborted",
+    "remote end closed connection",
+    "timed out",
+)
+
+
+def _is_transient_network_error(err_str: str) -> bool:
+    err_lower = err_str.lower()
+    return any(marker in err_lower for marker in _TRANSIENT_NETWORK_MARKERS)
+
 
 class VideoFormat:
     """Represents a single available video/audio format."""
@@ -127,7 +144,12 @@ def _get_default_ydl_opts() -> Dict[str, Any]:
     opts: Dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
-        "extractor_args": {"youtube": {"player_client": ["ios", "android", "mweb", "web"]}},
+        "socket_timeout": 30,
+        "retries": 10,
+        "fragment_retries": 10,
+        "extractor_retries": 3,
+        # yt-dlp only enables "deno" by default; use node since that's what's installed here
+        "js_runtimes": {"node": {}},
     }
 
     # Auto-detect cookies.txt in workspace or via env var
@@ -165,7 +187,27 @@ class VideoDownloader:
                 info = ydl.extract_info(url, download=False)
         except (DownloadError, Exception) as exc:
             err_str = str(exc)
-            if "Sign in to confirm you're not a bot" in err_str or "bot" in err_str.lower() or "confirm" in err_str.lower():
+
+            if _is_transient_network_error(err_str):
+                # Connection was dropped mid-request; retry once with a fresh connection
+                # before falling through to the anti-bot recovery chain.
+                try:
+                    with YoutubeDL(opts) as ydl_retry:
+                        info = ydl_retry.extract_info(url, download=False)
+                except Exception as retry_exc:
+                    exc, err_str = retry_exc, str(retry_exc)
+
+            needs_recovery = (
+                info is None
+                and (
+                    "Sign in to confirm you're not a bot" in err_str
+                    or "bot" in err_str.lower()
+                    or "confirm" in err_str.lower()
+                    or _is_transient_network_error(err_str)
+                )
+            )
+
+            if needs_recovery:
                 # Attempt 1: Browser cookie auto-extraction fallback (Chrome, Safari, Brave, Firefox)
                 for browser_name in ("chrome", "safari", "brave", "firefox", "edge"):
                     try:
@@ -186,6 +228,10 @@ class VideoDownloader:
                         with YoutubeDL(fb_opts) as ydl_fb:
                             info = ydl_fb.extract_info(url, download=False)
                     except Exception as fb_exc:
+                        if _is_transient_network_error(str(fb_exc)) or _is_transient_network_error(err_str):
+                            raise ValueError(
+                                f"La conexión con YouTube se cortó repetidamente: {fb_exc}"
+                            ) from fb_exc
                         raise ValueError(
                             "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto para bypass continuo."
                         ) from fb_exc

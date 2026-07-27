@@ -52,10 +52,12 @@
       "priceCurrency": "USD"
     },
     "featureList": [
-      "Descarga en resolución original",
+      "Descarga en resolución original 4K y 1080p60",
+      "Descarga masiva de listas y playlists a .ZIP",
+      "Recorte de clips interactivo estilo CapCut",
+      "Extracción de audio HD MP3 (320k) y WAV",
+      "Exportación de subtítulos .SRT, .VTT y .TXT",
       "Soporte para más de 1000 plataformas",
-      "Extracción de audio independiente",
-      "Progreso en tiempo real",
       "Sin registro ni publicidad"
     ]
   }
@@ -151,36 +153,35 @@
     <div class="hero-inner">
       <!-- Announcement Pill Badge -->
       <a href="#app" class="hero-announcement reveal">
-        <span class="announcement-tag">Novedad</span>
-        <span class="announcement-text">Velo v2.0 — Descarga multimedia ultra-rápida</span>
+        <span class="announcement-tag">Velo v2.0</span>
+        <span class="announcement-text">Nueva arquitectura SaaS: Descargas masivas .ZIP, Recorte CapCut y Audio HD</span>
         <svg class="announcement-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
 
       <!-- Headline -->
       <h1 class="hero-title reveal">
-        Extrae video y audio<br>
+        Descarga y procesa medios<br>
         <span class="hero-gradient">en calidad original.</span>
       </h1>
 
       <!-- Subtitle -->
       <p class="hero-subtitle reveal">
-        Pega la URL de cualquier plataforma. Velo inspecciona los formatos disponibles,
-        procesa los flujos de medios en tiempo real y descarga el archivo a tu dispositivo.
+        Una suite multimedia completa de alto rendimiento. Inspecciona resoluciones 4K, recorta fragmentos en tiempo real, extrae audio en alta fidelidad y descarga playlists completas en archivos .ZIP.
       </p>
 
       <!-- Action Buttons -->
       <div class="hero-actions reveal">
         <a href="#app" class="btn-primary btn-lg">
-          <span>Probar Downloader</span>
+          <span>Abrir Velo App</span>
           <span class="btn-icon-wrapper">
             <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
         </a>
-        <a href="#features" class="btn-ghost btn-lg">Explorar funciones</a>
+        <a href="#features" class="btn-ghost btn-lg">Ver capacidades v2.0</a>
       </div>
 
       <!-- Hero Platforms Line -->
-      <p class="hero-platforms reveal">Soporte nativo para YouTube, TikTok, Instagram, Twitter/X, Vimeo, Twitch y +1000 sitios</p>
+      <p class="hero-platforms reveal">Compatibilidad nativa con YouTube, TikTok, Instagram, Twitter/X, Vimeo, Twitch y +1000 plataformas</p>
     </div>
 
     <!-- ============================================================
@@ -208,183 +209,379 @@
 
         <!-- Window App Core -->
         <div class="window-body">
-          <!-- Input Form Area -->
-          <div class="input-container">
-            <div class="input-header-row">
-              <div class="input-mode-tabs" role="tablist">
-                <button type="button" class="mode-tab active" data-mode="single">URL Única</button>
-                <button type="button" class="mode-tab" data-mode="batch">Lista / Playlist (.ZIP)</button>
+          <div class="app-layout-grid">
+            <!-- LEFT COLUMN: CONFIGURATION & PROCESSING (65%) -->
+            <div class="app-main-col">
+
+              <!-- SECTION 1: Fuente del contenido -->
+              <section class="app-card">
+                <div class="card-header">
+                  <h2 class="card-title">1. Añade el contenido</h2>
+                </div>
+                
+                <div class="input-mode-selector" role="tablist">
+                  <button type="button" class="mode-tab active" data-mode="single">URL única</button>
+                  <button type="button" class="mode-tab" data-mode="batch">Lista / Playlist (.ZIP)</button>
+                  <button type="button" class="mode-tab" data-mode="local">Archivo local</button>
+                </div>
+
+                <div id="single-input-wrap" class="input-row">
+                  <div class="input-icon-wrap">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <input
+                    id="url-input"
+                    type="url"
+                    placeholder="Pega aquí el enlace de YouTube, TikTok, Instagram..."
+                    autocomplete="off"
+                    spellcheck="false"
+                  >
+                  <button id="btn-paste" type="button" class="btn-secondary-action" title="Pegar desde el portapapeles">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="2" width="8" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <span>Pegar</span>
+                  </button>
+                  <button id="btn-fetch" type="button" class="btn-primary-action">
+                    <span class="btn-label">Inspeccionar</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                  </button>
+                </div>
+
+                <div id="batch-input-wrap" class="batch-input-row hidden">
+                  <textarea
+                    id="batch-url-input"
+                    class="batch-textarea"
+                    rows="3"
+                    placeholder="Pega múltiples enlaces (uno por línea) o el enlace de una lista de reproducción..."
+                  ></textarea>
+                  <button id="btn-batch-fetch" type="button" class="btn-primary-action batch-fetch-btn">
+                    <span class="btn-label">Descargar Lote (.ZIP)</span>
+                  </button>
+                </div>
+
+                <div id="local-input-wrap" class="local-input-row hidden">
+                  <div class="drop-zone" id="local-drop-zone">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Arrastra un archivo multimedia aquí o haz clic para buscar</span>
+                    <input type="file" id="local-file-input" class="hidden" accept="video/*,audio/*">
+                  </div>
+                </div>
+
+                <p id="input-error" class="error-msg" role="alert" aria-live="polite"></p>
+
+                <!-- Compact Detected Video Info Card -->
+                <div id="video-card" class="detected-content-card hidden">
+                  <div class="detected-thumb-wrap">
+                    <svg class="thumb-placeholder" width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>
+                    <img id="video-thumb" class="detected-thumb" alt="" loading="lazy" crossorigin="anonymous">
+                    <span class="badge-status-green">Contenido detectado</span>
+                  </div>
+                  <div class="detected-meta">
+                    <h3 id="video-title" class="detected-title"></h3>
+                    <div class="detected-sub">
+                      <span id="video-uploader" class="detected-uploader"></span>
+                      <span class="dot-sep">•</span>
+                      <span id="video-duration" class="detected-duration"></span>
+                    </div>
+                  </div>
+                  <button type="button" id="btn-clear-url" class="btn-icon-subtle" title="Reemplazar o eliminar contenido">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+              </section>
+
+              <!-- SECTION 2: Tipo de descarga -->
+              <section class="app-card">
+                <div class="card-header">
+                  <h2 class="card-title">2. Elige qué quieres obtener</h2>
+                </div>
+
+                <div class="download-types-grid" role="radiogroup" aria-label="Tipo de descarga">
+                  <button type="button" class="download-type-card active" role="radio" aria-checked="true" data-group="video">
+                    <div class="type-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 10l5-3v10l-5-3M4 6h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="type-content">
+                      <span class="type-title">Video + audio</span>
+                      <span class="type-desc">Contenido completo en calidad HD / 4K</span>
+                    </div>
+                    <span class="type-radio-check"></span>
+                  </button>
+
+                  <button type="button" class="download-type-card" role="radio" aria-checked="false" data-group="audio">
+                    <div class="type-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="type-content">
+                      <span class="type-title">Solo audio</span>
+                      <span class="type-desc">Extrae pistas de música o podcast (MP3/WAV)</span>
+                    </div>
+                    <span class="type-radio-check"></span>
+                  </button>
+
+                  <button type="button" class="download-type-card" role="radio" aria-checked="false" data-group="video_only">
+                    <div class="type-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>
+                    </div>
+                    <div class="type-content">
+                      <span class="type-title">Solo video</span>
+                      <span class="type-desc">Flujo de video sin pista sonora</span>
+                    </div>
+                    <span class="type-radio-check"></span>
+                  </button>
+                </div>
+
+                <div class="webm-toggle-row">
+                  <label class="switch-control" title="Incluye formatos WebM, VP9 y AV1 de alta eficiencia">
+                    <input type="checkbox" id="toggle-webm">
+                    <span class="switch-slider"></span>
+                    <span class="switch-label">Compatibilidad WebM</span>
+                  </label>
+                  <span class="tooltip-info" title="Permite acceder a formatos de mayor eficiencia como VP9/AV1 en navegadores compatibles">ⓘ</span>
+                </div>
+              </section>
+
+              <!-- SECTION 3: Calidad y formato -->
+              <section id="formats-section" class="app-card">
+                <div class="card-header">
+                  <h2 class="card-title">3. Calidad y formato</h2>
+                </div>
+
+                <!-- Format Table / Grid -->
+                <div id="resolutions-grid" class="resolutions-grid">
+                  <div class="res-card-placeholder">Inspecciona un enlace para ver los formatos disponibles.</div>
+                </div>
+
+                <!-- Hidden Table format body for compatibility -->
+                <div class="table-wrap hidden">
+                  <table id="formats-table">
+                    <tbody id="formats-body"></tbody>
+                  </table>
+                  <p id="empty-group" class="empty-group hidden">No hay formatos disponibles en esta categoría.</p>
+                </div>
+
+                <!-- Advanced Options Toggle -->
+                <div class="advanced-toggle-wrap">
+                  <button type="button" id="btn-toggle-advanced" class="btn-text-subtle">
+                    <span>Mostrar opciones avanzadas</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="chevron-icon"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+
+                <div id="advanced-options-panel" class="advanced-panel hidden">
+                  <div class="advanced-grid">
+                    <div class="advanced-item">
+                      <label for="adv-codec-select">Códec preferido</label>
+                      <select id="adv-codec-select" class="adv-select">
+                        <option value="auto">Automático (Recomendado)</option>
+                        <option value="h264">H.264 / AVC (Máxima compatibilidad)</option>
+                        <option value="hevc">H.265 / HEVC</option>
+                        <option value="vp9">VP9 (YouTube HD)</option>
+                        <option value="av1">AV1 (Ultra Alta Eficiencia)</option>
+                      </select>
+                    </div>
+                    <div class="advanced-item">
+                      <label for="adv-fps-select">Límite de FPS</label>
+                      <select id="adv-fps-select" class="adv-select">
+                        <option value="max">Original del video</option>
+                        <option value="60">Hasta 60 fps</option>
+                        <option value="30">Hasta 30 fps</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- SECTION 4: Herramientas adicionales -->
+              <section class="app-card">
+                <div class="card-header">
+                  <h2 class="card-title">4. Herramientas opcionales</h2>
+                </div>
+
+                <div class="tools-two-col-grid">
+                  <!-- Subtitles Module -->
+                  <div id="subtitles-section" class="tool-module-card">
+                    <div class="tool-header">
+                      <label class="switch-control">
+                        <input type="checkbox" id="subtitles-toggle">
+                        <span class="switch-slider"></span>
+                        <span class="tool-name">Subtítulos & Transcripción</span>
+                      </label>
+                    </div>
+                    <div id="subtitles-controls" class="tool-body">
+                      <div class="tool-field-group">
+                        <label>Idioma disponible</label>
+                        <select id="sub-lang-select" class="sub-select"></select>
+                      </div>
+                      <div class="tool-field-group">
+                        <label>Formato de salida</label>
+                        <div class="segmented-control" id="sub-fmt-segmented">
+                          <button type="button" class="preset-btn active" id="btn-sub-srt" data-fmt="srt">.SRT</button>
+                          <button type="button" class="preset-btn" id="btn-sub-vtt" data-fmt="vtt">.VTT</button>
+                          <button type="button" class="preset-btn" id="btn-sub-txt" data-fmt="txt">.TXT</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Recortar Clip Module -->
+                  <div id="trim-section" class="tool-module-card">
+                    <div class="tool-header">
+                      <label class="switch-control">
+                        <input type="checkbox" id="trim-toggle" class="trim-checkbox">
+                        <span class="switch-slider"></span>
+                        <span class="tool-name">Recortar clip (CapCut Trim)</span>
+                      </label>
+                    </div>
+                    <div id="trim-controls" class="tool-body hidden">
+                      <div class="trim-presets-compact">
+                        <button type="button" class="preset-btn" data-preset="15">15s</button>
+                        <button type="button" class="preset-btn" data-preset="30">30s</button>
+                        <button type="button" class="preset-btn" data-preset="60">60s</button>
+                        <button type="button" class="preset-btn active" data-preset="all">Todo</button>
+                      </div>
+                      <div class="trim-inputs-row">
+                        <div class="trim-field">
+                          <label for="trim-start-input">Inicio</label>
+                          <input type="text" id="trim-start-input" class="trim-time-field" value="00:00" placeholder="00:00">
+                        </div>
+                        <div class="trim-field">
+                          <label for="trim-end-input">Fin</label>
+                          <input type="text" id="trim-end-input" class="trim-time-field" value="00:00" placeholder="00:00">
+                        </div>
+                      </div>
+                      <div class="trim-slider-wrap">
+                        <div class="trim-track-bg"></div>
+                        <div id="trim-highlight" class="trim-highlight"></div>
+                        <input type="range" id="trim-start-range" class="trim-range" min="0" max="100" value="0" step="1">
+                        <input type="range" id="trim-end-range" class="trim-range" min="0" max="100" value="100" step="1">
+                      </div>
+                      <div class="trim-duration-row">
+                        <span id="trim-badge" class="trim-badge-text">Clip: 00:00 - 00:00 (0s)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Convertir a GIF Module -->
+                  <div class="tool-module-card col-span-2">
+                    <div class="tool-header">
+                      <label class="switch-control">
+                        <input type="checkbox" id="gif-toggle">
+                        <span class="switch-slider"></span>
+                        <span class="tool-name">Convertir a GIF animado</span>
+                      </label>
+                    </div>
+                    <div id="gif-controls" class="tool-body tool-body-row hidden">
+                      <div class="tool-field">
+                        <label>Máximo 15s</label>
+                        <span class="tool-subtext">Genera paleta HD de alta fidelidad</span>
+                      </div>
+                      <button type="button" id="btn-export-gif" class="btn-secondary-action">
+                        <span>🎞️ Convertir a GIF</span>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </section>
+
+            </div>
+
+            <!-- RIGHT COLUMN: STICKY EXPORT SUMMARY (35%) -->
+            <div class="app-side-col">
+              <div class="sticky-summary-card">
+                <div class="summary-header">
+                  <h3 class="summary-title">Resumen de exportación</h3>
+                  <span class="summary-badge-live">EN VIVO</span>
+                </div>
+
+                <div class="summary-preview-row">
+                  <img id="summary-thumb" class="summary-thumb" src="/static/favicon.svg" alt="">
+                  <div class="summary-title-wrap">
+                    <span id="summary-video-title" class="summary-video-title">Esperando enlace...</span>
+                    <span id="summary-video-uploader" class="summary-video-uploader">Inspecciona una URL</span>
+                  </div>
+                </div>
+
+                <div class="summary-divider"></div>
+
+                <div class="summary-details-list">
+                  <div class="summary-detail-item">
+                    <span class="detail-label">Tipo de salida</span>
+                    <span id="summary-type" class="detail-value">Video + Audio</span>
+                  </div>
+                  <div class="summary-detail-item">
+                    <span class="detail-label">Resolución</span>
+                    <span id="summary-resolution" class="detail-value">Por seleccionar</span>
+                  </div>
+                  <div class="summary-detail-item">
+                    <span class="detail-label">Formato</span>
+                    <span id="summary-format" class="detail-value">MP4</span>
+                  </div>
+                  <div class="summary-detail-item">
+                    <span class="detail-label">Duración final</span>
+                    <span id="summary-duration" class="detail-value">--:--</span>
+                  </div>
+                  <div class="summary-detail-item">
+                    <span class="detail-label">Tamaño estimado</span>
+                    <span id="summary-size" class="detail-value">-- MB</span>
+                  </div>
+                  <div class="summary-detail-item">
+                    <span class="detail-label">Herramientas activas</span>
+                    <span id="summary-tools" class="detail-value">Ninguna</span>
+                  </div>
+                </div>
+
+                <div class="summary-divider"></div>
+
+                <!-- Status Checklist -->
+                <div class="summary-checklist">
+                  <div id="check-url" class="check-item pending">
+                    <span class="check-icon">✓</span>
+                    <span class="check-text">URL validada</span>
+                  </div>
+                  <div id="check-quality" class="check-item pending">
+                    <span class="check-icon">✓</span>
+                    <span class="check-text">Calidad seleccionada</span>
+                  </div>
+                  <div id="check-config" class="check-item pending">
+                    <span class="check-icon">✓</span>
+                    <span class="check-text">Configuración lista</span>
+                  </div>
+                </div>
+
+                <!-- Primary Action Button -->
+                <div class="summary-cta-wrap">
+                  <button id="btn-download" type="button" class="btn-cta-main" disabled>
+                    <span class="btn-label">Iniciar descarga</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                  </button>
+                  <p class="cta-microcopy">Podrás revisar el nombre y la ubicación del archivo antes de guardarlo.</p>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="progress-section" class="summary-progress-widget hidden">
+                  <div class="progress-header">
+                    <span id="progress-label">Descargando...</span>
+                    <span id="progress-pct">0%</span>
+                  </div>
+                  <div class="progress-track">
+                    <div id="progress-bar" class="progress-fill" style="width: 0%"></div>
+                  </div>
+                  <div class="progress-details">
+                    <span id="progress-size"></span>
+                    <span id="progress-speed"></span>
+                    <span id="progress-eta"></span>
+                  </div>
+                </div>
+
+                <!-- Status Section -->
+                <div id="status-section" class="status-section hidden">
+                  <div id="status-msg" class="status-msg"></div>
+                </div>
+
               </div>
-              <button id="btn-pwa-install" type="button" class="pwa-install-btn hidden">⚡ Instalar App</button>
             </div>
-
-            <div id="single-input-wrap" class="input-row">
-              <div class="input-icon-wrap">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
-              <input
-                id="url-input"
-                type="url"
-                placeholder="Pega aquí el enlace de YouTube, TikTok, Instagram..."
-                autocomplete="off"
-                spellcheck="false"
-              >
-              <button id="btn-fetch" type="button">
-                <span class="btn-label">Inspeccionar</span>
-                <span class="btn-spinner" aria-hidden="true"></span>
-              </button>
-            </div>
-
-            <div id="batch-input-wrap" class="batch-input-row hidden">
-              <textarea
-                id="batch-url-input"
-                class="batch-textarea"
-                rows="4"
-                placeholder="Pega múltiples enlaces (uno por línea) o el enlace de una lista de reproducción..."
-              ></textarea>
-              <button id="btn-batch-fetch" type="button" class="batch-fetch-btn">
-                <span class="btn-label">Descargar Lote (.ZIP)</span>
-              </button>
-            </div>
-
-            <p id="input-error" class="error-msg" role="alert" aria-live="polite"></p>
           </div>
-
-          <!-- Video Info Card -->
-          <section id="video-card" class="video-card hidden">
-            <img id="video-thumb" class="video-thumb" alt="" loading="lazy">
-            <div class="video-meta">
-              <h3 id="video-title" class="video-title"></h3>
-              <div class="video-details">
-                <span id="video-uploader" class="video-uploader"></span>
-                <span class="dot-sep"></span>
-                <span id="video-duration" class="video-duration"></span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Formats & Tools Section -->
-          <section id="formats-section" class="formats-section hidden">
-            <!-- Format Category & Options Bar -->
-            <div class="formats-header-bar">
-              <div class="tab-group" role="tablist">
-                <button class="tab active" data-group="video" role="tab" aria-selected="true">Video + Audio</button>
-                <button class="tab" data-group="audio" role="tab" aria-selected="false">Solo Audio</button>
-              </div>
-
-              <!-- Options Switch (WebM / Advanced Codecs) -->
-              <div class="webm-toggle-wrap">
-                <label class="switch-control" title="Mostrar formatos WebM, VP9 y AV1 adicionales">
-                  <input type="checkbox" id="toggle-webm">
-                  <span class="switch-slider"></span>
-                  <span class="switch-label">Códecs WebM</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Formats Table -->
-            <div class="table-wrap">
-              <table id="formats-table">
-                <thead>
-                  <tr>
-                    <th class="col-radio"></th>
-                    <th>Resolución</th>
-                    <th>Formato</th>
-                    <th class="col-size">Tamaño Aprox.</th>
-                  </tr>
-                </thead>
-                <tbody id="formats-body"></tbody>
-              </table>
-              <p id="empty-group" class="empty-group hidden">No hay formatos disponibles en esta categoría.</p>
-            </div>
-
-            <!-- Subtitles & Captions Module -->
-            <div id="subtitles-section" class="subtitles-section hidden">
-              <div class="subtitles-header">
-                <span class="subtitles-title">💬 Subtítulos & Transcripciones</span>
-                <div class="subtitles-controls">
-                  <select id="sub-lang-select" class="sub-select"></select>
-                  <button type="button" class="preset-btn" id="btn-sub-srt">.SRT</button>
-                  <button type="button" class="preset-btn" id="btn-sub-vtt">.VTT</button>
-                  <button type="button" class="preset-btn" id="btn-sub-txt">Texto (.TXT)</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Horizontal Trim & Clip Bar (CapCut Style) -->
-            <div id="trim-section" class="trim-section">
-              <div class="trim-header">
-                <label class="trim-toggle-label">
-                  <input type="checkbox" id="trim-toggle" class="trim-checkbox">
-                  <span class="trim-toggle-custom"></span>
-                  <span class="trim-toggle-text">Recortar Clip (CapCut Trim)</span>
-                </label>
-                <div class="trim-header-right">
-                  <button type="button" id="btn-export-gif" class="preset-btn hidden">🎞️ Convertir a GIF</button>
-                  <span id="trim-badge" class="trim-badge hidden">Clip: 00:00 - 00:00 (0s)</span>
-                </div>
-              </div>
-
-              <div id="trim-controls" class="trim-controls hidden">
-                <!-- Row 1: Quick Presets -->
-                <div class="trim-presets">
-                  <button type="button" class="preset-btn" data-preset="15">15s</button>
-                  <button type="button" class="preset-btn" data-preset="30">30s</button>
-                  <button type="button" class="preset-btn" data-preset="60">60s</button>
-                  <button type="button" class="preset-btn active" data-preset="all">Completo</button>
-                </div>
-
-                <!-- Row 2: Full Width Timeline Slider & Time Fields -->
-                <div class="trim-inputs-grid">
-                  <div class="trim-input-group">
-                    <label for="trim-start-input">Inicio</label>
-                    <input type="text" id="trim-start-input" class="trim-time-field" value="00:00" placeholder="00:00">
-                  </div>
-
-                  <div class="trim-slider-wrap">
-                    <div class="trim-track-bg"></div>
-                    <div id="trim-highlight" class="trim-highlight"></div>
-                    <input type="range" id="trim-start-range" class="trim-range" min="0" max="100" value="0" step="1">
-                    <input type="range" id="trim-end-range" class="trim-range" min="0" max="100" value="100" step="1">
-                  </div>
-
-                  <div class="trim-input-group">
-                    <label for="trim-end-input">Fin</label>
-                    <input type="text" id="trim-end-input" class="trim-time-field" value="00:00" placeholder="00:00">
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Action Button -->
-            <div class="actions">
-              <button id="btn-download" type="button" disabled>
-                <span class="btn-label">Iniciar Descarga</span>
-                <span class="btn-spinner" aria-hidden="true"></span>
-              </button>
-            </div>
-          </section>
-
-          <!-- Progress bar -->
-          <section id="progress-section" class="progress-section hidden">
-            <div class="progress-header">
-              <span id="progress-label">Descargando...</span>
-              <span id="progress-pct">0%</span>
-            </div>
-            <div class="progress-track">
-              <div id="progress-bar" class="progress-fill" style="width: 0%"></div>
-            </div>
-            <div class="progress-details">
-              <span id="progress-size"></span>
-              <span id="progress-speed"></span>
-              <span id="progress-eta"></span>
-            </div>
-          </section>
-
-          <!-- Status -->
-          <section id="status-section" class="status-section hidden">
-            <div id="status-msg" class="status-msg"></div>
-          </section>
         </div>
       </div>
     </div>
@@ -396,9 +593,9 @@
   <section class="section features" id="features">
     <div class="section-inner">
       <div class="section-header reveal">
-        <div class="section-badge">Capacidades</div>
+        <div class="section-badge">Capacidades v2.0</div>
         <h2 class="section-title">Diseñado para máxima velocidad.<br>Sin intermediarios.</h2>
-        <p class="section-subtitle">Arquitectura asíncrona optimizada para la Web moderna.</p>
+        <p class="section-subtitle">Arquitectura asíncrona de alto rendimiento optimizada para la web moderna.</p>
       </div>
 
       <div class="bento-grid">
@@ -406,12 +603,12 @@
         <div class="bento-card col-span-2 reveal">
           <div class="card-glow" aria-hidden="true"></div>
           <div class="bento-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 3v18M3 9h18" stroke="currentColor" stroke-width="1.5"/></svg>
           </div>
-          <h3 class="bento-title">Procesamiento Asíncrono de Ultra-Velocidad</h3>
-          <p class="bento-desc">Velo utiliza un motor Flask asíncrono con hilos de fondo. Las inspecciones de metadatos y descargas ocurren sin bloquear tu sesión.</p>
+          <h3 class="bento-title">Interfaz SaaS de 2 Columnas con Resumen Sticky</h3>
+          <p class="bento-desc">Organización en dos columnas optimizadas: panel de control de opciones a la izquierda y resumen lateral flotante a la derecha con validación automática antes de procesar.</p>
           <div class="bento-code-preview">
-            <code>POST /api/download/start → Status 200 OK (Stream HTTP)</code>
+            <code>POST /api/info → Validated Format • Live Progress Thread</code>
           </div>
         </div>
 
@@ -421,28 +618,38 @@
           <div class="bento-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
-          <h3 class="bento-title">Resolución Nativa 4K & 60fps</h3>
-          <p class="bento-desc">Inspecciona y descarga el flujo original. Si la fuente está en 4K o 1080p60, obtienes exactamente esa calidad.</p>
+          <h3 class="bento-title">Descargas Masivas (.ZIP)</h3>
+          <p class="bento-desc">Descarga listas de reproducción y múltiples enlaces procesados en lote, empaquetados en un único archivo comprimido .ZIP.</p>
         </div>
 
         <!-- Bento Card 3 -->
         <div class="bento-card reveal">
           <div class="card-glow" aria-hidden="true"></div>
           <div class="bento-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 3v18M18 3v18M3 8h18M3 16h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           </div>
-          <h3 class="bento-title">Extracción de Audio Independiente</h3>
-          <p class="bento-desc">Separa la pista de sonido de cualquier video en formatos nativos MP3, M4A o Opus con un solo clic.</p>
+          <h3 class="bento-title">Smart Clip & Recorte CapCut</h3>
+          <p class="bento-desc">Ajusta los tiempos de inicio y fin con un deslizador visual interactivo. Extrae solo el fragmento de video o audio que necesitas (15s, 30s, 60s o personalizado).</p>
         </div>
 
-        <!-- Bento Card 4 (Span 2) -->
+        <!-- Bento Card 4 -->
+        <div class="bento-card reveal">
+          <div class="card-glow" aria-hidden="true"></div>
+          <div class="bento-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3 class="bento-title">Másters de Audio (MP3 320k & WAV)</h3>
+          <p class="bento-desc">Extrae pistas sonoras independientes en la máxima fidelidad disponible: MP3 a 320 kbps o formato WAV sin compresión para producción de audio.</p>
+        </div>
+
+        <!-- Bento Card 5 (Span 2) -->
         <div class="bento-card col-span-2 reveal">
           <div class="card-glow" aria-hidden="true"></div>
           <div class="bento-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" stroke="currentColor" stroke-width="1.5"/></svg>
           </div>
-          <h3 class="bento-title">Más de 1000 Plataformas Soportadas</h3>
-          <p class="bento-desc">Al estar impulsado por yt-dlp, Velo ofrece compatibilidad completa con YouTube, TikTok, Instagram, Twitter/X, Vimeo, Dailymotion, Twitch y cientos de plataformas de video en la web.</p>
+          <h3 class="bento-title">Subtítulos & +1000 Plataformas Soportadas</h3>
+          <p class="bento-desc">Exporta subtítulos nativos y auto-generados en formatos .SRT, .VTT o .TXT. Compatible con YouTube, TikTok, Instagram, Twitter/X, Vimeo, Twitch y cientos de plataformas globales.</p>
         </div>
       </div>
     </div>
@@ -456,26 +663,26 @@
       <div class="section-header reveal">
         <div class="section-badge">Flujo de trabajo</div>
         <h2 class="section-title">Tres pasos simples.</h2>
-        <p class="section-subtitle">Sin instalaciones ni registros molestos.</p>
+        <p class="section-subtitle">Procesamiento transparente sin instalaciones ni registros.</p>
       </div>
 
       <div class="steps-grid">
         <div class="step-card reveal">
           <div class="step-badge">Paso 01</div>
-          <h3 class="step-title">Pega la URL</h3>
-          <p class="step-desc">Copia el enlace del contenido multimedia desde tu plataforma o app favorita y pégalo en Velo.</p>
+          <h3 class="step-title">Ingresa la fuente</h3>
+          <p class="step-desc">Pega la URL de tu video o playlist, o selecciona un archivo local directamente desde tu dispositivo.</p>
         </div>
 
         <div class="step-card reveal">
           <div class="step-badge">Paso 02</div>
-          <h3 class="step-title">Inspecciona y Elige</h3>
-          <p class="step-desc">Revisa los formatos, tamaños de archivo estimados y resoluciones. Selecciona la opción deseada.</p>
+          <h3 class="step-title">Configura el formato</h3>
+          <p class="step-desc">Selecciona la calidad (4K, 1080p, Audio HD), ajusta los tiempos de corte si deseas un clip y revisa el resumen lateral.</p>
         </div>
 
         <div class="step-card reveal">
           <div class="step-badge">Paso 03</div>
-          <h3 class="step-title">Descarga Directa</h3>
-          <p class="step-desc">Velo procesa el flujo y transfiere el archivo directamente a la carpeta de descargas de tu navegador.</p>
+          <h3 class="step-title">Procesa y Descarga</h3>
+          <p class="step-desc">Velo procesa el archivo de manera asíncrona mediante FFmpeg en la nube y lo envía directamente a tu navegador.</p>
         </div>
       </div>
     </div>
@@ -498,17 +705,37 @@
             <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </summary>
           <div class="faq-answer">
-            <p>Velo utiliza yt-dlp como motor de extracción, lo que le permite trabajar con más de 1000 sitios web incluyendo YouTube, Vimeo, Twitter/X, Instagram, TikTok, Facebook, Dailymotion, Twitch, SoundCloud y muchos más.</p>
+            <p>Velo utiliza yt-dlp como motor principal de extracción, lo que le permite trabajar con más de 1000 sitios web incluyendo YouTube, Vimeo, Twitter/X, Instagram, TikTok, Facebook, Dailymotion, Twitch, SoundCloud y muchos más.</p>
           </div>
         </details>
 
         <details class="faq-item reveal">
           <summary class="faq-question">
-            <span>¿Es necesario crear una cuenta para usar Velo?</span>
+            <span>¿Cómo funcionan las descargas masivas o de playlists?</span>
             <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </summary>
           <div class="faq-answer">
-            <p>No. Velo no requiere registro, cuenta de usuario ni suscripción de ningún tipo. Simplemente pega la URL del contenido y descarga.</p>
+            <p>Al seleccionar la pestaña "Lista / Playlist", puedes ingresar múltiples URLs o el enlace de una lista completa. Velo procesa cada elemento en el servidor y te entrega un único archivo comprimido .ZIP listo para guardar.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary class="faq-question">
+            <span>¿Puedo recortar solo un fragmento de un video?</span>
+            <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </summary>
+          <div class="faq-answer">
+            <p>Sí. Activa la opción de recorte en las opciones avanzadas para usar el deslizador interactivo o los botones de atajo (15s, 30s, 60s). Velo cortará el video o audio de forma exacta sin descargar datos innecesarios.</p>
+          </div>
+        </details>
+
+        <details class="faq-item reveal">
+          <summary class="faq-question">
+            <span>¿Cómo descargo solo los subtítulos de un video?</span>
+            <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </summary>
+          <div class="faq-answer">
+            <p>En el panel de opciones avanzadas se detectan los subtítulos disponibles (manuales o auto-generados). Puedes seleccionar el idioma y exportar el archivo directamente en formato .SRT, .VTT o .TXT.</p>
           </div>
         </details>
 
@@ -518,27 +745,7 @@
             <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </summary>
           <div class="faq-answer">
-            <p>No. Los archivos se almacenan temporalmente en el servidor durante la transferencia y se eliminan automáticamente después. No se recopilan datos personales, historial de uso ni cookies de rastreo.</p>
-          </div>
-        </details>
-
-        <details class="faq-item reveal">
-          <summary class="faq-question">
-            <span>¿Tengo que instalar algún programa o extensión en mi dispositivo?</span>
-            <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </summary>
-          <div class="faq-answer">
-            <p>No. Velo funciona 100% en la nube. Toda la tecnología de procesamiento y combinación de audio y video en alta definición (1080p y 4K) se ejecuta automáticamente en nuestros servidores mediante el motor FFmpeg. Tú solo descargas el archivo final listo para reproducir en cualquier computadora o teléfono.</p>
-          </div>
-        </details>
-
-        <details class="faq-item reveal">
-          <summary class="faq-question">
-            <span>¿Cuál es la resolución máxima que puedo descargar?</span>
-            <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </summary>
-          <div class="faq-answer">
-            <p>La resolución máxima depende de lo que la plataforma de origen ofrezca para cada video. Velo muestra todas las opciones disponibles, incluyendo 4K, 1440p, 1080p y resoluciones inferiores, sin imponer límites propios.</p>
+            <p>No. Los archivos se procesan de forma temporal en el servidor durante la transferencia y se eliminan de forma inmediata. No se recopilan datos personales, historial de uso ni cookies de rastreo.</p>
           </div>
         </details>
 
@@ -548,7 +755,7 @@
             <svg class="faq-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </summary>
           <div class="faq-answer">
-            <p>Sí. Velo es un proyecto de código abierto completamente gratuito, sin planes de pago, sin funciones premium bloqueadas y sin publicidad de ningún tipo.</p>
+            <p>Sí. Velo es 100% gratuito, libre de publicidad, sin suscripciones obligatorias ni limitaciones ocultas.</p>
           </div>
         </details>
       </div>

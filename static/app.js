@@ -104,6 +104,8 @@
   // --- DOM Elements ---
   var urlInput       = document.getElementById("url-input");
   var btnFetch       = document.getElementById("btn-fetch");
+  var btnPaste       = document.getElementById("btn-paste");
+  var btnClearUrl    = document.getElementById("btn-clear-url");
   var inputError     = document.getElementById("input-error");
 
   var videoCard      = document.getElementById("video-card");
@@ -117,7 +119,31 @@
   var emptyGroup     = document.getElementById("empty-group");
   var btnDownload    = document.getElementById("btn-download");
 
-  // Trim & Clip (CapCut Style) DOM Elements
+  var resolutionsGrid    = document.getElementById("resolutions-grid");
+  var downloadTypeCards  = document.querySelectorAll(".download-type-card");
+  var btnToggleAdvanced  = document.getElementById("btn-toggle-advanced");
+  var advancedOptionsPanel = document.getElementById("advanced-options-panel");
+
+  // Summary Card DOM Elements
+  var summaryThumb       = document.getElementById("summary-thumb");
+  var summaryVideoTitle  = document.getElementById("summary-video-title");
+  var summaryVideoUploader = document.getElementById("summary-video-uploader");
+  var summaryType        = document.getElementById("summary-type");
+  var summaryResolution  = document.getElementById("summary-resolution");
+  var summaryFormat      = document.getElementById("summary-format");
+  var summaryDuration    = document.getElementById("summary-duration");
+  var summarySize        = document.getElementById("summary-size");
+  var summaryTools       = document.getElementById("summary-tools");
+  var checkUrl           = document.getElementById("check-url");
+  var checkQuality       = document.getElementById("check-quality");
+  var checkConfig        = document.getElementById("check-config");
+
+  // Optional Tools DOM Elements
+  var subtitlesToggle    = document.getElementById("subtitles-toggle");
+  var gifToggle          = document.getElementById("gif-toggle");
+  var gifControls        = document.getElementById("gif-controls");
+
+  // Trim & Clip DOM Elements
   var trimToggle     = document.getElementById("trim-toggle");
   var trimBadge      = document.getElementById("trim-badge");
   var trimControls   = document.getElementById("trim-controls");
@@ -154,6 +180,7 @@
 
   // --- Helpers ---
   function setLoading(btn, on) {
+    if (!btn) return;
     btn.classList.toggle("loading", on);
     btn.disabled = on;
   }
@@ -162,12 +189,13 @@
   function clearError()   { inputError.textContent = ""; }
 
   function showStatus(msg, type) {
+    if (!statusSection || !statusMsg) return;
     statusSection.classList.remove("hidden");
     statusMsg.textContent = msg;
     statusMsg.className = "status-msg " + type;
   }
 
-  function hideStatus() { statusSection.classList.add("hidden"); }
+  function hideStatus() { if (statusSection) statusSection.classList.add("hidden"); }
 
   function formatBytes(bytes) {
     if (!bytes || bytes <= 0) return "";
@@ -193,6 +221,31 @@
     d.textContent = str;
     return d.innerHTML;
   }
+
+  function renderVideoCard(data) {
+    if (videoThumb) {
+      videoThumb.onerror = function () {
+        this.style.display = "none";
+      };
+      videoThumb.src = data.thumbnail || "";
+    }
+    if (videoTitle) videoTitle.textContent = data.title || "Sin título";
+    if (videoUploader) videoUploader.textContent = data.uploader ? "Por " + data.uploader : "";
+    if (videoDuration) videoDuration.textContent = data.duration ? secondsToTimeStr(data.duration) : "";
+    if (videoCard) videoCard.classList.remove("hidden");
+
+    if (summaryThumb) {
+      summaryThumb.onerror = function () {
+        this.src = "/static/favicon.svg";
+      };
+      summaryThumb.src = data.thumbnail || "/static/favicon.svg";
+    }
+    if (summaryVideoTitle) summaryVideoTitle.textContent = data.title || "Sin título";
+    if (summaryVideoUploader) summaryVideoUploader.textContent = data.uploader ? "Por " + data.uploader : "";
+    if (summaryDuration) summaryDuration.textContent = data.duration ? secondsToTimeStr(data.duration) : "--:--";
+    updateExportSummary();
+  }
+
 
   // --- Trim & Clip Logic (CapCut Style) ---
   function secondsToTimeStr(secs) {
@@ -373,9 +426,22 @@
         { format_id: "wav", resolution: "audio only", ext: "wav", filesize: "Sin compresión", category: "audio_only" }
       );
 
+      // Video-only list (separate group for "Solo video" card)
+      var videoOnlyList = [];
+      if (rawGroups.video_only) {
+        videoOnlyList = rawGroups.video_only.slice();
+        videoOnlyList.sort(function (a, b) {
+          var heightA = getResolutionHeight(a.resolution);
+          var heightB = getResolutionHeight(b.resolution);
+          if (heightA !== heightB) return heightB - heightA;
+          return b.format_id.localeCompare(a.format_id);
+        });
+      }
+
       allGroups = {
         video: videoList,
-        audio: audioList
+        audio: audioList,
+        video_only: videoOnlyList
       };
 
       // Populate Subtitles dropdown if available
@@ -410,7 +476,8 @@
 
       formatsSection.classList.remove("hidden");
     } catch (err) {
-      showError("Error de conexión con el servidor.");
+      console.error("Error en fetchInfo:", err);
+      showError(err.message && err.name !== "TypeError" ? err.message : "Error de conexión con el servidor.");
     } finally {
       setLoading(btnFetch, false);
     }
@@ -496,7 +563,7 @@
           showError(data.error || "Error al iniciar descarga en lote.");
           return;
         }
-        pollStatus(data.download_id);
+        pollProgress(data.download_id);
       } catch (err) {
         showError("Error de conexión al procesar el lote.");
       } finally {
@@ -577,21 +644,129 @@
     });
   }
 
-  // --- Format table (Smart Filtering) ---
+  // --- Live Summary Update ---
+  function updateExportSummary() {
+    if (checkUrl) checkUrl.classList.toggle("active", Boolean(currentUrl));
+
+    if (selectedFormat) {
+      if (checkQuality) checkQuality.classList.add("active");
+      if (checkConfig) checkConfig.classList.add("active");
+      if (summaryResolution) summaryResolution.textContent = selectedFormat.resolution || "--";
+      if (summaryFormat) summaryFormat.textContent = (selectedFormat.ext || "mp4").toUpperCase();
+      if (summarySize) summarySize.textContent = formatSize(selectedFormat.filesize);
+    } else {
+      if (checkQuality) checkQuality.classList.remove("active");
+      if (checkConfig) checkConfig.classList.remove("active");
+      if (summaryResolution) summaryResolution.textContent = "Por seleccionar";
+      if (summaryFormat) summaryFormat.textContent = "MP4";
+      if (summarySize) summarySize.textContent = "-- MB";
+    }
+
+    var typeName = "Video + Audio";
+    if (activeGroup === "audio") typeName = "Solo audio";
+    if (activeGroup === "video_only") typeName = "Solo video";
+    if (summaryType) summaryType.textContent = typeName;
+
+    var activeTools = [];
+    if (subtitlesToggle && subtitlesToggle.checked) activeTools.push("Subtítulos");
+    if (trimToggle && trimToggle.checked) activeTools.push("Trim Clip");
+    if (gifToggle && gifToggle.checked) activeTools.push("GIF");
+    if (summaryTools) summaryTools.textContent = activeTools.length ? activeTools.join(", ") : "Ninguna";
+  }
+
+  function clearSummary() {
+    if (summaryThumb) summaryThumb.src = "/static/favicon.svg";
+    if (summaryVideoTitle) summaryVideoTitle.textContent = "Esperando enlace...";
+    if (summaryVideoUploader) summaryVideoUploader.textContent = "Inspecciona una URL";
+    if (summaryDuration) summaryDuration.textContent = "--:--";
+    selectedFormat = null;
+    updateExportSummary();
+  }
+
+  // --- Paste & Clear Handlers ---
+  if (btnPaste && urlInput) {
+    btnPaste.addEventListener("click", async function () {
+      try {
+        var text = await navigator.clipboard.readText();
+        if (text) {
+          urlInput.value = text.trim();
+          fetchInfo();
+        }
+      } catch (err) {
+        console.warn("Clipboard read not allowed:", err);
+        showError("No se pudo acceder al portapapeles. Por favor pega el enlace manualmente.");
+      }
+    });
+  }
+
+  if (btnClearUrl) {
+    btnClearUrl.addEventListener("click", function () {
+      if (urlInput) urlInput.value = "";
+      currentUrl = "";
+      if (videoCard) videoCard.classList.add("hidden");
+      if (formatsSection) formatsSection.classList.add("hidden");
+      clearSummary();
+    });
+  }
+
+  // --- Download Type Selector Cards ---
+  downloadTypeCards.forEach(function (card) {
+    card.addEventListener("click", function () {
+      var group = card.dataset.group || "video";
+      switchTab(group);
+    });
+  });
+
+  // --- Advanced Options Toggle ---
+  if (btnToggleAdvanced && advancedOptionsPanel) {
+    btnToggleAdvanced.addEventListener("click", function () {
+      var isHidden = advancedOptionsPanel.classList.toggle("hidden");
+      var span = btnToggleAdvanced.querySelector("span");
+      if (span) span.textContent = isHidden ? "Mostrar opciones avanzadas" : "Ocultar opciones avanzadas";
+      var chevron = btnToggleAdvanced.querySelector(".chevron-icon");
+      if (chevron) chevron.style.transform = isHidden ? "rotate(0deg)" : "rotate(180deg)";
+    });
+  }
+
+  // --- Tab Switching for Formats ---
+  function switchTab(groupName) {
+    activeGroup = groupName || "video";
+
+    downloadTypeCards.forEach(function (card) {
+      var isTarget = card.dataset.group === activeGroup;
+      card.classList.toggle("active", isTarget);
+      card.setAttribute("aria-checked", isTarget ? "true" : "false");
+    });
+
+    selectedFormat = null;
+    if (btnDownload) btnDownload.disabled = true;
+    renderFormats(allGroups[activeGroup] || []);
+    updateExportSummary();
+  }
+
+  if (toggleWebM) {
+    toggleWebM.addEventListener("change", function () {
+      renderFormats(allGroups[activeGroup] || []);
+    });
+  }
+
+  // --- Format Grid & Table Rendering ---
   function renderFormats(formats) {
-    formatsBody.innerHTML = "";
+    if (formatsBody) formatsBody.innerHTML = "";
+    if (resolutionsGrid) resolutionsGrid.innerHTML = "";
 
     if (!formats || !formats.length) {
-      emptyGroup.classList.remove("hidden");
+      if (emptyGroup) emptyGroup.classList.remove("hidden");
+      if (resolutionsGrid) {
+        resolutionsGrid.innerHTML = '<div class="res-card-placeholder">No hay formatos disponibles en esta categoría.</div>';
+      }
       return;
     }
 
-    // Smart Filter: Hide WebM formats by default unless toggleWebM is checked
     var showWebM = toggleWebM && toggleWebM.checked;
     var filteredFormats = formats;
 
     if (!showWebM) {
-      // Keep mp4 formats or non-webm formats, or keep webm only if no mp4 exists for that resolution
       var resolutionsWithMp4 = {};
       formats.forEach(function (fmt) {
         if (fmt.ext === "mp4") {
@@ -601,19 +776,22 @@
 
       filteredFormats = formats.filter(function (fmt) {
         if (fmt.ext === "webm" && resolutionsWithMp4[fmt.resolution]) {
-          return false; // hide webm duplicate when mp4 is available
+          return false;
         }
         return true;
       });
     }
 
     if (!filteredFormats.length) {
-      filteredFormats = formats; // fallback
+      filteredFormats = formats;
     }
 
-    emptyGroup.classList.add("hidden");
+    if (emptyGroup) emptyGroup.classList.add("hidden");
 
-    filteredFormats.forEach(function (fmt) {
+    var isRecommendedAssigned = false;
+
+    filteredFormats.forEach(function (fmt, index) {
+      // Table Row
       var tr = document.createElement("tr");
       tr.dataset.formatId = fmt.format_id;
       tr.dataset.ext = fmt.ext;
@@ -627,17 +805,55 @@
         '<td>' + esc(fmt.ext) + '</td>' +
         '<td class="col-size">' + esc(formatSize(fmt.filesize)) + '</td>';
 
-      tr.addEventListener("click", function () { selectRow(tr); });
-      formatsBody.appendChild(tr);
+      // Grid Resolution Card
+      var resCard = document.createElement("div");
+      resCard.className = "res-card";
+      resCard.dataset.formatId = fmt.format_id;
+
+      var isRec = (!isRecommendedAssigned && (fmt.resolution.includes("1080") || index === 0));
+      if (isRec) isRecommendedAssigned = true;
+
+      resCard.innerHTML =
+        (isRec ? '<span class="res-card-badge">Recomendado</span>' : '') +
+        '<span class="res-card-label">' + esc(fmt.resolution) + '</span>' +
+        '<span class="res-card-meta">' + esc(fmt.ext.toUpperCase()) + ' • ' + esc(formatSize(fmt.filesize)) + '</span>';
+
+      var onClick = function () { selectFormat(fmt, tr, resCard); };
+      tr.addEventListener("click", onClick);
+      resCard.addEventListener("click", onClick);
+
+      if (formatsBody) formatsBody.appendChild(tr);
+      if (resolutionsGrid) resolutionsGrid.appendChild(resCard);
     });
+
+    if (filteredFormats.length > 0) {
+      var firstTr = formatsBody ? formatsBody.querySelector("tr") : null;
+      var firstCard = resolutionsGrid ? resolutionsGrid.querySelector(".res-card") : null;
+      selectFormat(filteredFormats[0], firstTr, firstCard);
+    }
   }
 
-  function selectRow(tr) {
-    var prev = formatsBody.querySelector("tr.selected");
-    if (prev) prev.classList.remove("selected");
-    tr.classList.add("selected");
-    selectedFormat = { format_id: tr.dataset.formatId, ext: tr.dataset.ext };
-    btnDownload.disabled = false;
+  function selectFormat(fmt, tr, resCard) {
+    if (formatsBody) {
+      var prevTr = formatsBody.querySelector("tr.selected");
+      if (prevTr) prevTr.classList.remove("selected");
+    }
+    if (tr) tr.classList.add("selected");
+
+    if (resolutionsGrid) {
+      var prevCard = resolutionsGrid.querySelector(".res-card.active");
+      if (prevCard) prevCard.classList.remove("active");
+    }
+    if (resCard) resCard.classList.add("active");
+
+    selectedFormat = {
+      format_id: fmt.format_id,
+      ext: fmt.ext,
+      resolution: fmt.resolution,
+      filesize: fmt.filesize
+    };
+    if (btnDownload) btnDownload.disabled = false;
+    updateExportSummary();
   }
 
   // --- Download (Async API polling) ---

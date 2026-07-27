@@ -39,10 +39,43 @@ def check_ffmpeg() -> bool:
 _HAS_FFMPEG = check_ffmpeg()
 
 
+@app.after_request
+def add_security_headers(response):
+    """Inject HTTP defense-in-depth security headers."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    return response
+
+
 @app.route("/")
 def index():
     """Serve the main HTML page."""
     return send_from_directory("static", "index.html")
+
+
+@app.route("/robots.txt")
+def robots():
+    """Serve robots.txt for search engines."""
+    content = "User-agent: *\nAllow: /\nSitemap: /sitemap.xml\n"
+    return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    """Serve dynamic sitemap.xml for SEO indexing."""
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        '  <url>\n'
+        '    <loc>/</loc>\n'
+        '    <changefreq>daily</changefreq>\n'
+        '    <priority>1.0</priority>\n'
+        '  </url>\n'
+        '</urlset>'
+    )
+    return content, 200, {"Content-Type": "application/xml; charset=utf-8"}
 
 
 @app.route("/api/info", methods=["POST"])
@@ -63,7 +96,11 @@ def get_info():
     result = info.to_dict()
     result["has_ffmpeg"] = _HAS_FFMPEG
 
-    print(f"[INFO] {info.title} — {len(info.formats)} formats")
+    groups = result.get("groups", {})
+    c = len(groups.get("combined", []))
+    v = len(groups.get("video_only", []))
+    a = len(groups.get("audio_only", []))
+    print(f"[INFO] {info.title} — {len(info.formats)} formats (combined={c}, video_only={v}, audio_only={a})")
     return jsonify(result)
 
 
