@@ -43,6 +43,84 @@
     onScroll();
   }
 
+  // --- i18n Internationalization Engine ---
+  var currentLang = "es";
+
+  function getTranslation(key) {
+    if (window.TRANSLATIONS && window.TRANSLATIONS[currentLang] && window.TRANSLATIONS[currentLang][key]) {
+      return window.TRANSLATIONS[currentLang][key];
+    }
+    if (window.TRANSLATIONS && window.TRANSLATIONS["es"] && window.TRANSLATIONS["es"][key]) {
+      return window.TRANSLATIONS["es"][key];
+    }
+    return key;
+  }
+
+  function applyLanguage(lang) {
+    currentLang = (lang === "en") ? "en" : "es";
+    try {
+      localStorage.setItem("velo_lang", currentLang);
+    } catch (e) {}
+
+    document.documentElement.lang = currentLang;
+
+    var btnLangToggle = document.getElementById("btn-lang-toggle");
+    if (btnLangToggle) {
+      var optEs = btnLangToggle.querySelector(".lang-es");
+      var optEn = btnLangToggle.querySelector(".lang-en");
+      if (optEs) optEs.classList.toggle("active", currentLang === "es");
+      if (optEn) optEn.classList.toggle("active", currentLang === "en");
+    }
+
+    var elements = document.querySelectorAll("[data-i18n]");
+    elements.forEach(function (el) {
+      var key = el.getAttribute("data-i18n");
+      var translated = getTranslation(key);
+      if (translated) {
+        if (translated.includes("<") && translated.includes(">")) {
+          el.innerHTML = translated;
+        } else {
+          el.textContent = translated;
+        }
+      }
+    });
+
+    var phElements = document.querySelectorAll("[data-i18n-ph]");
+    phElements.forEach(function (el) {
+      var key = el.getAttribute("data-i18n-ph");
+      var translated = getTranslation(key);
+      if (translated) {
+        el.setAttribute("placeholder", translated);
+      }
+    });
+
+    if (typeof updateExportSummary === "function") {
+      updateExportSummary();
+    }
+  }
+
+  function initLanguage() {
+    var saved = null;
+    try {
+      saved = localStorage.getItem("velo_lang");
+    } catch (e) {}
+
+    if (!saved) {
+      var navLang = navigator.language || navigator.userLanguage || "es";
+      saved = navLang.toLowerCase().startsWith("es") ? "es" : "en";
+    }
+
+    applyLanguage(saved);
+
+    var btnLangToggle = document.getElementById("btn-lang-toggle");
+    if (btnLangToggle) {
+      btnLangToggle.addEventListener("click", function () {
+        var nextLang = (currentLang === "es") ? "en" : "es";
+        applyLanguage(nextLang);
+      });
+    }
+  }
+
   // --- PayPal Hosted Donation Button Render ---
   function initPayPalButton() {
     if (window.paypal && typeof window.paypal.HostedButtons === "function") {
@@ -657,27 +735,27 @@
     } else {
       if (checkQuality) checkQuality.classList.remove("active");
       if (checkConfig) checkConfig.classList.remove("active");
-      if (summaryResolution) summaryResolution.textContent = "Por seleccionar";
+      if (summaryResolution) summaryResolution.textContent = getTranslation("summary.pending");
       if (summaryFormat) summaryFormat.textContent = "MP4";
       if (summarySize) summarySize.textContent = "-- MB";
     }
 
-    var typeName = "Video + Audio";
-    if (activeGroup === "audio") typeName = "Solo audio";
-    if (activeGroup === "video_only") typeName = "Solo video";
+    var typeName = getTranslation("app.type_combo_title");
+    if (activeGroup === "audio") typeName = getTranslation("app.type_audio_title");
+    if (activeGroup === "video_only") typeName = getTranslation("app.type_video_title");
     if (summaryType) summaryType.textContent = typeName;
 
     var activeTools = [];
-    if (subtitlesToggle && subtitlesToggle.checked) activeTools.push("Subtítulos");
-    if (trimToggle && trimToggle.checked) activeTools.push("Trim Clip");
+    if (subtitlesToggle && subtitlesToggle.checked) activeTools.push(getTranslation("app.subtitles_label"));
+    if (trimToggle && trimToggle.checked) activeTools.push(getTranslation("app.trim_label"));
     if (gifToggle && gifToggle.checked) activeTools.push("GIF");
-    if (summaryTools) summaryTools.textContent = activeTools.length ? activeTools.join(", ") : "Ninguna";
+    if (summaryTools) summaryTools.textContent = activeTools.length ? activeTools.join(", ") : getTranslation("summary.none");
   }
 
   function clearSummary() {
     if (summaryThumb) summaryThumb.src = "/static/favicon.svg";
-    if (summaryVideoTitle) summaryVideoTitle.textContent = "Esperando enlace...";
-    if (summaryVideoUploader) summaryVideoUploader.textContent = "Inspecciona una URL";
+    if (summaryVideoTitle) summaryVideoTitle.textContent = getTranslation("summary.waiting_link");
+    if (summaryVideoUploader) summaryVideoUploader.textContent = getTranslation("summary.inspect_prompt");
     if (summaryDuration) summaryDuration.textContent = "--:--";
     selectedFormat = null;
     updateExportSummary();
@@ -967,6 +1045,7 @@
   }
 
   // --- Events ---
+  initLanguage();
   btnFetch.addEventListener("click", fetchInfo);
   btnDownload.addEventListener("click", startDownload);
   urlInput.addEventListener("keydown", function (e) {
