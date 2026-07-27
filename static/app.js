@@ -357,6 +357,15 @@
         return m ? parseInt(m[1], 10) : 0;
       }
 
+      videoList.sort(function (a, b) {
+        var heightA = getResolutionHeight(a.resolution);
+        var heightB = getResolutionHeight(b.resolution);
+        if (heightA !== heightB) {
+          return heightB - heightA;
+        }
+        return b.format_id.localeCompare(a.format_id);
+      });
+
       // Master Audio Options
       var audioList = rawGroups.audio_only || [];
       audioList.unshift(
@@ -567,6 +576,9 @@
       }
     });
   }
+
+  // --- Format table (Smart Filtering) ---
+  function renderFormats(formats) {
     formatsBody.innerHTML = "";
 
     if (!formats || !formats.length) {
