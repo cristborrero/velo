@@ -119,7 +119,8 @@ def download_start():
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
     format_id = (data.get("format_id") or "").strip()
-    
+    format_category = (data.get("format_category") or "").strip() or None
+
     start_seconds = data.get("start_seconds")
     end_seconds = data.get("end_seconds")
 
@@ -169,6 +170,7 @@ def download_start():
                 progress_callback=_on_progress,
                 start_seconds=start_seconds,
                 end_seconds=end_seconds,
+                format_category=format_category,
             )
             # Find actual file (yt-dlp might change the extension)
             files = glob.glob(os.path.join(dl_dir, "*"))

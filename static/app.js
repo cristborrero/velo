@@ -928,7 +928,8 @@
       format_id: fmt.format_id,
       ext: fmt.ext,
       resolution: fmt.resolution,
-      filesize: fmt.filesize
+      filesize: fmt.filesize,
+      category: fmt.category
     };
     if (btnDownload) btnDownload.disabled = false;
     updateExportSummary();
@@ -952,6 +953,7 @@
       var payload = {
         url: currentUrl,
         format_id: selectedFormat.format_id,
+        format_category: selectedFormat.category || "",
       };
 
       if (trimToggle && trimToggle.checked) {

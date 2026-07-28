@@ -360,6 +360,7 @@ class VideoDownloader:
         progress_callback: Optional[ProgressCallback] = None,
         start_seconds: Optional[float] = None,
         end_seconds: Optional[float] = None,
+        format_category: Optional[str] = None,
     ) -> str:
         """Download a video in the selected format with optional time range clipping.
 
@@ -388,27 +389,36 @@ class VideoDownloader:
             audio_codec = "wav"
             audio_quality = "0"
         else:
-            # Determine if the format needs an audio merge (video-only formats)
-            try:
-                info = self.get_info(url)
-                selected = [f for f in info.formats if f.format_id == format_id]
-                if selected and selected[0].category == "video_only":
-                    has_ffmpeg = shutil.which("ffmpeg") is not None
-                    if not has_ffmpeg:
-                        for p in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
-                            if os.path.isfile(p) and os.access(p, os.X_OK):
-                                os.environ["PATH"] = os.path.dirname(p) + os.pathsep + os.environ.get("PATH", "")
-                                has_ffmpeg = True
-                                break
-                    if not has_ffmpeg:
-                        raise ValueError(
-                            "Esta calidad de video requiere 'ffmpeg' instalado en el servidor para poder combinarla con audio."
-                        )
-                    format_spec = f"{format_id}+bestaudio/best"
-            except ValueError:
-                raise
-            except Exception:
-                # Fallback to the raw format_id if metadata extraction fails
+            # Determine if the format needs an audio merge (video-only formats).
+            # A caller that already knows the category (e.g. the web UI, which
+            # fetched /api/info earlier) can pass it directly to skip this
+            # extra metadata round-trip — each yt-dlp call is another chance
+            # to hit YouTube's bot-detection challenge.
+            needs_merge = format_category == "video_only"
+            if format_category is None:
+                try:
+                    info = self.get_info(url)
+                    selected = [f for f in info.formats if f.format_id == format_id]
+                    needs_merge = bool(selected and selected[0].category == "video_only")
+                except ValueError:
+                    raise
+                except Exception:
+                    # Fallback to the raw format_id if metadata extraction fails
+                    needs_merge = False
+
+            if needs_merge:
+                has_ffmpeg = shutil.which("ffmpeg") is not None
+                if not has_ffmpeg:
+                    for p in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
+                        if os.path.isfile(p) and os.access(p, os.X_OK):
+                            os.environ["PATH"] = os.path.dirname(p) + os.pathsep + os.environ.get("PATH", "")
+                            has_ffmpeg = True
+                            break
+                if not has_ffmpeg:
+                    raise ValueError(
+                        "Esta calidad de video requiere 'ffmpeg' instalado en el servidor para poder combinarla con audio."
+                    )
+                format_spec = f"{format_id}+bestaudio/best"
                 pass
 
         outtmpl = os.path.join(output_dir, "%(title)s.%(ext)s")
@@ -424,13 +434,17 @@ class VideoDownloader:
                 "preferredquality": audio_quality,
             }]
 
-        # Configure time range clipping if specified
+        # Configure time range clipping if specified.
+        # Deliberately NOT setting force_keyframes_at_cuts: that flag forces a
+        # full ffmpeg re-encode for frame-exact cuts, which is slow even on
+        # a real machine and effectively unusable on Render's shared free-tier
+        # CPU. Without it, yt-dlp stream-copies the range (cut aligned to the
+        # nearest keyframe, off by at most a couple seconds) — fast and light.
         if start_seconds is not None or end_seconds is not None:
             start_val = float(start_seconds) if start_seconds is not None else 0.0
             end_val = float(end_seconds) if end_seconds is not None else float("inf")
             try:
                 opts["download_ranges"] = download_range_func([], [[start_val, end_val]])
-                opts["force_keyframes_at_cuts"] = True
             except Exception:
                 pass
 

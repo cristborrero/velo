@@ -211,7 +211,13 @@ class TestDownload:
 
     @patch("downloader.core.YoutubeDL")
     def test_download_with_trim_parameters(self, mock_ydl_cls: MagicMock) -> None:
-        """Verify yt-dlp receives download_ranges when start_seconds and end_seconds are passed."""
+        """Verify yt-dlp receives download_ranges when start_seconds and end_seconds are passed.
+
+        force_keyframes_at_cuts is intentionally NOT set: it forces a full
+        ffmpeg re-encode for frame-exact cuts, which is too slow/heavy for
+        Render's free-tier CPU. Without it, yt-dlp does a fast stream-copy
+        trim aligned to the nearest keyframe instead.
+        """
         instance = mock_ydl_cls.return_value.__enter__.return_value
         instance.download.return_value = 0
         instance.extract_info.return_value = {"ext": "mp4", "title": "test", "formats": FAKE_INFO_DICT["formats"]}
@@ -223,7 +229,7 @@ class TestDownload:
         call_args = mock_ydl_cls.call_args_list[-1]
         opts = call_args[0][0] if call_args[0] else {}
         assert "download_ranges" in opts
-        assert opts.get("force_keyframes_at_cuts") is True
+        assert "force_keyframes_at_cuts" not in opts
 
 
     @patch("downloader.core.YoutubeDL")
