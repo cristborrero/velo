@@ -990,6 +990,15 @@
         var res = await fetch("/api/download/status/" + downloadId);
         var d = await res.json();
 
+        if (!res.ok || (d.status !== "downloading" && d.status !== "done" && d.status !== "error")) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          progressSection.classList.add("hidden");
+          showStatus(d.error || "Se perdió el estado de la descarga. Intenta nuevamente.", "error");
+          setLoading(btnDownload, false);
+          return;
+        }
+
         if (d.status === "downloading") {
           var pct = d.percent || 0;
           progressBar.style.width = pct + "%";

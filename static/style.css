@@ -2369,6 +2369,7 @@ tr.selected .radio-dot {
 }
 
 .btn-cta-main {
+  position: relative;
   width: 100%;
   background: var(--text-1);
   color: var(--bg);
@@ -2389,6 +2390,11 @@ tr.selected .radio-dot {
   background: var(--surface);
   color: var(--text-3);
   cursor: not-allowed;
+}
+
+#btn-download.loading .btn-spinner {
+  border: 2px solid rgba(250, 250, 250, 0.25);
+  border-top-color: var(--text-1);
 }
 
 .btn-cta-main:not(:disabled):hover {
