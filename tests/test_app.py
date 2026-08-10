@@ -25,6 +25,38 @@ def test_sw_js_route(client):
     assert res.headers["Service-Worker-Allowed"] == "/"
 
 
+def test_service_worker_rotates_cache_and_refreshes_app_script(client):
+    source = client.get("/sw.js").get_data(as_text=True)
+
+    assert "velo-v3.0.1" in source
+    assert "requestPath === '/static/app.js'" in source
+    assert "fetch(event.request).then" in source
+    assert "catch(() => caches.match(event.request))" in source
+
+
+@patch("app.threading.Thread")
+@patch("app._dl.download")
+def test_download_exception_transitions_to_pollable_error(mock_download, mock_thread, client, monkeypatch):
+    downloads = {}
+    monkeypatch.setattr("app._downloads", downloads)
+    mock_download.side_effect = RuntimeError("upstream download failed")
+
+    res = client.post(
+        "/api/download/start",
+        json={"url": "https://example.com/video", "format_id": "best"},
+    )
+    assert res.status_code == 200
+
+    download_id = res.get_json()["download_id"]
+    worker = mock_thread.call_args.kwargs["target"]
+    worker()
+
+    status = client.get(f"/api/download/status/{download_id}")
+    assert status.status_code == 200
+    assert status.get_json()["status"] == "error"
+    assert status.get_json()["error"] == "upstream download failed"
+
+
 def test_manifest_route(client):
     res = client.get("/static/manifest.json")
     assert res.status_code == 200

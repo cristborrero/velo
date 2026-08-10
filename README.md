@@ -9,7 +9,7 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg?style=flat-square)](LICENSE)
   [![Python](https://img.shields.io/badge/Python-3.11+-white.svg?style=flat-square&logo=python&logoColor=black)](https://www.python.org/)
   [![Flask](https://img.shields.io/badge/Framework-Flask-white.svg?style=flat-square&logo=flask&logoColor=black)](https://flask.palletsprojects.com/)
-  [![Tests](https://img.shields.io/badge/Tests-24%2F24%20PASSED-brightgreen.svg?style=flat-square)](tests/)
+  [![Tests](https://img.shields.io/badge/Tests-30%2F30%20PASSED-brightgreen.svg?style=flat-square)](tests/)
   [![Security](https://img.shields.io/badge/Security-HTTP%20Headers%20Ready-white.svg?style=flat-square)]()
   [![SEO](https://img.shields.io/badge/SEO-JSON--LD%20%26%20Sitemap-white.svg?style=flat-square)]()
   [![Design](https://img.shields.io/badge/Design-SaaS%202--Column%20OLED-white.svg?style=flat-square)](static/style.css)
@@ -117,7 +117,7 @@ Access the application at `http://127.0.0.1:5001`.
 
 ### Automated Testing
 ```bash
-# Run complete test suite with pytest (24/24 tests passing)
+# Run complete test suite with pytest (30/30 tests passing)
 .venv/bin/pytest tests/ -v
 ```
 
@@ -136,7 +136,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 EXPOSE 5001
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "app:app"]
+# Download state is process-local, so keep a single worker.
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "1", "--threads", "4", "--worker-class", "gthread", "app:app"]
 ```
 
 ---
