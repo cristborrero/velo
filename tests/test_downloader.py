@@ -4,7 +4,13 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from downloader.core import VideoDownloader, VideoFormat, VideoInfo
+from downloader.core import (
+    VideoDownloader,
+    VideoFormat,
+    VideoInfo,
+    _youtube_runtime_error,
+    get_runtime_status,
+)
 
 
 # --- Fixtures ---
@@ -156,6 +162,37 @@ class TestGetInfo:
         dl = VideoDownloader()
         info = dl.get_info("https://example.com/video")
         assert info.duration_formatted == "1:02:03"
+
+
+class TestRuntimeDiagnostics:
+    """Tests for safe deployment diagnostics and actionable errors."""
+
+    @patch("downloader.core.shutil.which", return_value="/usr/bin/node")
+    @patch.dict(os.environ, {"YOUTUBE_COOKIES_TEXT": "secret-cookie-value"}, clear=False)
+    def test_runtime_status_reports_presence_without_secret(self, mock_which: MagicMock) -> None:
+        status = get_runtime_status()
+
+        assert status["node"] is True
+        assert status["youtube_cookies"] is True
+        assert "secret-cookie-value" not in str(status)
+
+    @patch("downloader.core._has_node_runtime", return_value=False)
+    def test_missing_node_error_is_actionable(self, mock_has_node: MagicMock) -> None:
+        error = _youtube_runtime_error("Sign in to confirm you're not a bot")
+
+        assert "Node.js" in error
+        assert "22" in error
+
+    @patch("downloader.core._has_node_runtime", return_value=True)
+    @patch("downloader.core._has_youtube_cookies", return_value=False)
+    def test_missing_youtube_auth_error_points_to_render_secret(
+        self, mock_has_cookies: MagicMock, mock_has_node: MagicMock
+    ) -> None:
+        error = _youtube_runtime_error("Sign in to confirm you're not a bot")
+
+        assert "YOUTUBE_COOKIES_TEXT" in error
+        assert "Render" in error
+        assert "archivo de cookies" in error
 
 
 # === Download ===
@@ -318,4 +355,3 @@ class TestNewFeatures:
 
         assert zip_res.endswith(".zip")
         assert os.path.exists(zip_res)
-

@@ -33,6 +33,19 @@ def test_manifest_route(client):
     assert "share_target" in data
 
 
+@patch("app.get_runtime_status")
+def test_health_route_exposes_safe_runtime_status(mock_status, client):
+    mock_status.return_value = {"node": True, "ffmpeg": True, "youtube_cookies": False}
+
+    res = client.get("/api/health")
+    data = json.loads(res.data)
+
+    assert res.status_code == 200
+    assert data["status"] == "ok"
+    assert data["runtime"] == {"node": True, "ffmpeg": True}
+    assert data["youtube"]["cookies_configured"] is False
+
+
 @patch("app._dl.download_subtitles")
 def test_subtitles_endpoint(mock_sub, client):
     mock_sub.return_value = "tests/test_app.py"

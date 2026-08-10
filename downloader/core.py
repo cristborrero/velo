@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import tempfile
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from yt_dlp import YoutubeDL
@@ -23,10 +26,75 @@ _TRANSIENT_NETWORK_MARKERS = (
     "timed out",
 )
 
+_JS_RUNTIME_MARKERS = (
+    "no supported javascript runtime",
+    "javascript runtime is not available",
+    "javascript runtime was not found",
+    "could not find node",
+    "node was not found",
+)
+
 
 def _is_transient_network_error(err_str: str) -> bool:
     err_lower = err_str.lower()
     return any(marker in err_lower for marker in _TRANSIENT_NETWORK_MARKERS)
+
+
+def _is_js_runtime_error(err_str: str) -> bool:
+    """Return whether yt-dlp explicitly reported a missing JS runtime."""
+    err_lower = err_str.lower()
+    return any(marker in err_lower for marker in _JS_RUNTIME_MARKERS)
+
+
+def _cookie_file_candidates() -> List[str]:
+    return [
+        os.environ.get("YOUTUBE_COOKIES"),
+        os.environ.get("COOKIES_FILE"),
+        "cookies.txt",
+        os.path.join(os.path.dirname(__file__), "..", "cookies.txt"),
+        os.path.join(os.path.dirname(__file__), "..", "assets", "cookies.txt"),
+        os.path.join(tempfile.gettempdir(), "youtube_cookies.txt"),
+    ]
+
+
+def _has_youtube_cookies() -> bool:
+    """Check cookie presence without reading or exposing cookie contents."""
+    if os.environ.get("YOUTUBE_COOKIES_TEXT", "").strip():
+        return True
+    return any(path and os.path.isfile(path) for path in _cookie_file_candidates())
+
+
+def _has_node_runtime() -> bool:
+    return shutil.which("node") is not None
+
+
+def get_runtime_status() -> Dict[str, bool]:
+    """Return safe deployment diagnostics without exposing secret values or paths."""
+    return {
+        "node": _has_node_runtime(),
+        "ffmpeg": shutil.which("ffmpeg") is not None,
+        "youtube_cookies": _has_youtube_cookies(),
+    }
+
+
+def _youtube_runtime_error(err_str: str = "") -> str:
+    """Build an actionable, secret-safe YouTube dependency error."""
+    if not _has_node_runtime() or _is_js_runtime_error(err_str):
+        return (
+            "El servidor no tiene un runtime Node.js compatible para resolver los "
+            "desafíos JavaScript de YouTube. Reconstruye la imagen de producción "
+            "con Node.js 22 o superior."
+        )
+    if not _has_youtube_cookies():
+        return (
+            "YouTube requiere autenticación anti-bot y no hay cookies configuradas. "
+            "Configura el secreto YOUTUBE_COOKIES_TEXT en Render; no se puede usar "
+            "un archivo de cookies ignorado por git en producción."
+        )
+    return (
+        "YouTube rechazó la autenticación configurada. Genera cookies.txt válidas "
+        "y actualiza el secreto YOUTUBE_COOKIES_TEXT en Render."
+    )
 
 
 class VideoFormat:
@@ -140,9 +208,6 @@ ProgressCallback = Callable[[float, int, int, float, float], None]
 
 def _get_default_ydl_opts() -> Dict[str, Any]:
     """Get default yt-dlp options with cookies auto-detection and player_client optimization."""
-    import os
-    import tempfile
-
     opts: Dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
@@ -167,15 +232,7 @@ def _get_default_ydl_opts() -> Dict[str, Any]:
 
     # 2. Check physical cookie file candidates if no cookiefile set yet
     if "cookiefile" not in opts:
-        cookie_candidates = [
-            os.environ.get("YOUTUBE_COOKIES"),
-            os.environ.get("COOKIES_FILE"),
-            "cookies.txt",
-            os.path.join(os.path.dirname(__file__), "..", "cookies.txt"),
-            os.path.join(os.path.dirname(__file__), "..", "assets", "cookies.txt"),
-            os.path.join(tempfile.gettempdir(), "youtube_cookies.txt"),
-        ]
-        for cpath in cookie_candidates:
+        for cpath in _cookie_file_candidates():
             if cpath and os.path.isfile(cpath):
                 opts["cookiefile"] = os.path.abspath(cpath)
                 break
@@ -223,6 +280,9 @@ class VideoDownloader:
                 )
             )
 
+            if info is None and (_is_js_runtime_error(err_str) or (needs_recovery and not _has_node_runtime())):
+                raise ValueError(_youtube_runtime_error(err_str)) from exc
+
             if needs_recovery:
                 # Attempt 1: Browser cookie auto-extraction fallback (Chrome, Safari, Brave, Firefox, Edge)
                 for browser_name in ("chrome", "safari", "brave", "firefox", "edge"):
@@ -260,9 +320,7 @@ class VideoDownloader:
                         raise ValueError(
                             f"La conexión con YouTube se cortó repetidamente: {err_str}"
                         ) from exc
-                    raise ValueError(
-                        "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto o configura la variable de entorno 'YOUTUBE_COOKIES_TEXT' en el servidor para bypass continuo."
-                    ) from exc
+                    raise ValueError(_youtube_runtime_error(err_str)) from exc
             else:
                 raise ValueError(
                     f"No se pudo extraer información del video: {exc}"
@@ -477,7 +535,10 @@ class VideoDownloader:
                             filepath = converted_path
         except (DownloadError, Exception) as exc:
             err_str = str(exc)
-            if "bot" in err_str.lower() or "confirm" in err_str.lower() or "sign in" in err_str.lower():
+            is_youtube_challenge = "bot" in err_str.lower() or "confirm" in err_str.lower() or "sign in" in err_str.lower()
+            if _is_js_runtime_error(err_str) or (is_youtube_challenge and not _has_node_runtime()):
+                raise ValueError(_youtube_runtime_error(err_str)) from exc
+            if is_youtube_challenge:
                 client_matrix = [
                     ["android", "ios"],
                     ["ios", "mweb"],
@@ -503,9 +564,7 @@ class VideoDownloader:
                         continue
 
                 if not downloaded_ok:
-                    raise ValueError(
-                        "YouTube ha solicitado verificación anti-bot. Por favor añade un archivo 'cookies.txt' en la raíz del proyecto o configura la variable de entorno 'YOUTUBE_COOKIES_TEXT' en el servidor para bypass continuo."
-                    ) from exc
+                    raise ValueError(_youtube_runtime_error(err_str)) from exc
             else:
                 raise ValueError(f"Error al descargar el video: {exc}") from exc
 

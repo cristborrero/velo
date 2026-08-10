@@ -12,7 +12,7 @@ from typing import Any, Dict
 
 from flask import Flask, jsonify, request, send_file, send_from_directory, make_response
 
-from downloader.core import VideoDownloader
+from downloader.core import VideoDownloader, get_runtime_status
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
@@ -37,6 +37,13 @@ def check_ffmpeg() -> bool:
     return False
 
 _HAS_FFMPEG = check_ffmpeg()
+_RUNTIME_STATUS = get_runtime_status()
+print(
+    "[INFO] Runtime diagnostics: "
+    f"node={'yes' if _RUNTIME_STATUS['node'] else 'no'} "
+    f"ffmpeg={'yes' if _RUNTIME_STATUS['ffmpeg'] else 'no'} "
+    f"youtube_cookies={'yes' if _RUNTIME_STATUS['youtube_cookies'] else 'no'}"
+)
 
 
 @app.after_request
@@ -60,6 +67,22 @@ def robots():
     """Serve robots.txt for search engines."""
     content = "User-agent: *\nAllow: /\nSitemap: /sitemap.xml\n"
     return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
+@app.route("/api/health")
+def health():
+    """Expose safe production dependency diagnostics; never return secret values."""
+    status = get_runtime_status()
+    return jsonify({
+        "status": "ok" if status["node"] and status["ffmpeg"] else "degraded",
+        "runtime": {
+            "node": status["node"],
+            "ffmpeg": status["ffmpeg"],
+        },
+        "youtube": {
+            "cookies_configured": status["youtube_cookies"],
+        },
+    })
 
 
 @app.route("/sitemap.xml")
