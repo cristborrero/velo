@@ -35,6 +35,9 @@ self.addEventListener('fetch', (event) => {
 
   const requestPath = new URL(event.request.url).pathname;
 
+  // Download state and files are per-request; never serve them from the PWA cache.
+  if (requestPath === '/api' || requestPath.startsWith('/api/')) return;
+
   // Always prefer a fresh app shell so clients receive polling fixes promptly.
   if (requestPath === '/static/app.js') {
     event.respondWith(

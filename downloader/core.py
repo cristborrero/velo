@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import glob
 import shutil
 import tempfile
+import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from yt_dlp import YoutubeDL
@@ -33,6 +35,9 @@ _JS_RUNTIME_MARKERS = (
     "could not find node",
     "node was not found",
 )
+
+_MATERIALIZED_COOKIE_FILES = set()
+_COOKIE_FILES_LOCK = threading.Lock()
 
 
 def _is_transient_network_error(err_str: str) -> bool:
@@ -75,6 +80,30 @@ def get_runtime_status() -> Dict[str, bool]:
         "ffmpeg": shutil.which("ffmpeg") is not None,
         "youtube_cookies": _has_youtube_cookies(),
     }
+
+
+def cleanup_materialized_cookie_files() -> None:
+    """Remove cookie files materialized from environment secrets."""
+    with _COOKIE_FILES_LOCK:
+        paths = list(_MATERIALIZED_COOKIE_FILES)
+        _MATERIALIZED_COOKIE_FILES.clear()
+    for path in paths:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            continue
+
+
+def cleanup_stale_materialized_cookie_files() -> None:
+    """Remove secret-derived cookie files left by an earlier process."""
+    pattern = os.path.join(tempfile.gettempdir(), "velo-youtube-cookies-*.txt")
+    for path in glob.glob(pattern):
+        try:
+            os.remove(path)
+        except OSError:
+            continue
 
 
 def _youtube_runtime_error(err_str: str = "") -> str:
@@ -223,10 +252,14 @@ def _get_default_ydl_opts() -> Dict[str, Any]:
     cookies_text = os.environ.get("YOUTUBE_COOKIES_TEXT")
     if cookies_text:
         try:
-            tmp_cookie_file = os.path.join(tempfile.gettempdir(), "youtube_cookies.txt")
+            tmp_cookie_file = os.path.join(
+                tempfile.gettempdir(), f"velo-youtube-cookies-{os.getpid()}-{id(opts)}.txt"
+            )
             with open(tmp_cookie_file, "w", encoding="utf-8") as f:
                 f.write(cookies_text.strip() + "\n")
             opts["cookiefile"] = tmp_cookie_file
+            with _COOKIE_FILES_LOCK:
+                _MATERIALIZED_COOKIE_FILES.add(tmp_cookie_file)
         except Exception:
             pass
 

@@ -1,8 +1,10 @@
 """Integration tests for Flask application routes."""
 
 import json
+import time
 from unittest.mock import patch, MagicMock
 import pytest
+import app as app_module
 from app import app
 
 
@@ -25,6 +27,19 @@ def test_sw_js_route(client):
     assert res.headers["Service-Worker-Allowed"] == "/"
 
 
+def test_runtime_mode_is_explicitly_validated():
+    assert app_module.get_runtime_mode("local") == "local"
+    assert app_module.get_runtime_mode("render") == "render"
+    with pytest.raises(ValueError):
+        app_module.get_runtime_mode("other")
+
+
+def test_api_responses_are_not_cached(client):
+    res = client.get("/api/health")
+    assert res.headers["Cache-Control"] == "no-store, max-age=0"
+    assert res.headers["Pragma"] == "no-cache"
+
+
 def test_service_worker_rotates_cache_and_refreshes_app_script(client):
     source = client.get("/sw.js").get_data(as_text=True)
 
@@ -32,6 +47,7 @@ def test_service_worker_rotates_cache_and_refreshes_app_script(client):
     assert "requestPath === '/static/app.js'" in source
     assert "fetch(event.request).then" in source
     assert "catch(() => caches.match(event.request))" in source
+    assert "requestPath.startsWith('/api/')" in source
 
 
 @patch("app.threading.Thread")
@@ -55,6 +71,71 @@ def test_download_exception_transitions_to_pollable_error(mock_download, mock_th
     assert status.status_code == 200
     assert status.get_json()["status"] == "error"
     assert status.get_json()["error"] == "upstream download failed"
+
+
+def test_render_file_cleanup_happens_when_response_closes(monkeypatch, tmp_path):
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    file_path = job_dir / "video.mp4"
+    file_path.write_bytes(b"video")
+    downloads = {
+        "job1": {"status": "done", "filepath": str(file_path), "created_at": time.time(), "job_dir": str(job_dir)}
+    }
+    monkeypatch.setattr(app_module, "_RUNTIME_MODE", "render")
+    monkeypatch.setattr(app_module, "_downloads", downloads)
+
+    with app.test_request_context("/api/download/file/job1"):
+        response = app_module.download_file("job1")
+        assert file_path.exists()
+        response.close()
+
+    assert not job_dir.exists()
+    assert "job1" not in downloads
+
+
+def test_render_error_cleanup_removes_job_state(monkeypatch):
+    downloads = {}
+    monkeypatch.setattr(app_module, "_RUNTIME_MODE", "render")
+    monkeypatch.setattr(app_module, "_downloads", downloads)
+    monkeypatch.setattr(app_module, "_dl", MagicMock())
+    app_module._dl.download.side_effect = RuntimeError("failed")
+
+    with patch("app.threading.Thread") as mock_thread, app.test_client() as client:
+        response = client.post(
+            "/api/download/start",
+            json={"url": "https://example.com/video", "format_id": "best"},
+        )
+        assert response.status_code == 200
+        mock_thread.call_args.kwargs["target"]()
+
+    assert downloads == {}
+
+
+def test_render_expiry_removes_state_and_files(monkeypatch, tmp_path):
+    job_dir = tmp_path / "expired"
+    job_dir.mkdir()
+    (job_dir / "partial.part").write_text("partial")
+    downloads = {
+        "expired": {
+            "status": "downloading",
+            "created_at": time.time() - 120,
+            "job_dir": str(job_dir),
+        }
+    }
+    monkeypatch.setattr(app_module, "_RUNTIME_MODE", "render")
+    monkeypatch.setattr(app_module, "_RENDER_JOB_TTL_SECONDS", 60)
+    monkeypatch.setattr(app_module, "_downloads", downloads)
+
+    assert app_module._expire_job_if_needed("expired", downloads["expired"])
+    assert not job_dir.exists()
+    assert downloads == {}
+
+
+def test_download_output_does_not_choose_arbitrary_file(tmp_path):
+    (tmp_path / "video.mp4").write_bytes(b"video")
+    (tmp_path / "video.info.json").write_text("metadata")
+    with pytest.raises(ValueError, match="identified safely"):
+        app_module._resolve_download_file("", str(tmp_path))
 
 
 def test_manifest_route(client):

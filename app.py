@@ -8,15 +8,30 @@ import shutil
 import tempfile
 import threading
 import uuid
+import time
 from typing import Any, Dict
 
 from flask import Flask, jsonify, request, send_file, send_from_directory, make_response
 
-from downloader.core import VideoDownloader, get_runtime_status
+from downloader.core import (
+    VideoDownloader,
+    cleanup_materialized_cookie_files,
+    cleanup_stale_materialized_cookie_files,
+    get_runtime_status,
+)
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
 _dl = VideoDownloader()
+
+_RUNTIME_MODES = {"local", "render"}
+_RUNTIME_MODE = os.environ.get("VELO_RUNTIME_MODE", "local").strip().lower()
+if _RUNTIME_MODE not in _RUNTIME_MODES:
+    raise RuntimeError("VELO_RUNTIME_MODE must be 'local' or 'render'")
+_RENDER_JOB_TTL_SECONDS = max(60, int(os.environ.get("VELO_RENDER_JOB_TTL_SECONDS", "1800")))
+_RENDER_MAX_CONCURRENT_JOBS = max(1, int(os.environ.get("VELO_RENDER_MAX_CONCURRENT_JOBS", "2")))
+_render_slots = threading.BoundedSemaphore(_RENDER_MAX_CONCURRENT_JOBS)
+_downloads_lock = threading.RLock()
 
 # Temp directory for downloads
 _DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), "video_virales_downloads")
@@ -24,6 +39,70 @@ os.makedirs(_DOWNLOAD_DIR, exist_ok=True)
 
 # In-memory download state: { download_id: { status, percent, speed, eta, ... } }
 _downloads: Dict[str, Dict[str, Any]] = {}
+
+
+def get_runtime_mode(value: str | None = None) -> str:
+    """Return the validated runtime mode used by the process."""
+    mode = (value if value is not None else os.environ.get("VELO_RUNTIME_MODE", "local")).strip().lower()
+    if mode not in _RUNTIME_MODES:
+        raise ValueError("VELO_RUNTIME_MODE must be 'local' or 'render'")
+    return mode
+
+
+def _cleanup_job(download_id: str, dl_dir: str) -> None:
+    """Delete all Render job state and files, including partial downloads."""
+    with _downloads_lock:
+        _downloads.pop(download_id, None)
+    shutil.rmtree(dl_dir, ignore_errors=True)
+    cleanup_materialized_cookie_files()
+
+
+def _cleanup_stale_render_jobs() -> None:
+    if _RUNTIME_MODE != "render":
+        return
+    cutoff = time.time() - _RENDER_JOB_TTL_SECONDS
+    for entry in os.scandir(_DOWNLOAD_DIR):
+        if entry.is_dir() and entry.stat().st_mtime < cutoff:
+            shutil.rmtree(entry.path, ignore_errors=True)
+    cleanup_stale_materialized_cookie_files()
+    cleanup_materialized_cookie_files()
+
+
+_cleanup_stale_render_jobs()
+
+
+def _resolve_download_file(filepath: str, dl_dir: str) -> str:
+    """Resolve yt-dlp output without guessing between arbitrary files."""
+    root = os.path.realpath(dl_dir)
+    if filepath:
+        candidate = os.path.realpath(filepath)
+        if candidate.startswith(root + os.sep) and os.path.isfile(candidate):
+            return candidate
+    files = sorted(
+        os.path.realpath(path)
+        for path in glob.glob(os.path.join(dl_dir, "*"))
+        if os.path.isfile(path) and not path.endswith((".part", ".ytdl"))
+    )
+    if len(files) == 1:
+        return files[0]
+    raise ValueError("Download completed but its output file could not be identified safely.")
+
+
+def _send_file_with_render_cleanup(path: str, download_name: str, job_dir: str):
+    response = send_file(path, as_attachment=True, download_name=download_name)
+    if _RUNTIME_MODE == "render":
+        response.call_on_close(lambda: shutil.rmtree(job_dir, ignore_errors=True))
+        response.call_on_close(cleanup_materialized_cookie_files)
+    return response
+
+
+def _expire_job_if_needed(download_id: str, state: Dict[str, Any]) -> bool:
+    """Expire Render jobs before serving stale status or file requests."""
+    created_at = state.get("created_at", time.time())
+    if _RUNTIME_MODE != "render" or time.time() - created_at <= _RENDER_JOB_TTL_SECONDS:
+        return False
+    _cleanup_job(download_id, state.get("job_dir", ""))
+    return True
 
 def check_ffmpeg() -> bool:
     if shutil.which("ffmpeg") is not None:
@@ -53,6 +132,9 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    if request.path.startswith('/api/') or request.path == '/api' or request.path.startswith('/api/download/file/'):
+        response.headers['Cache-Control'] = 'no-store, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
     return response
 
 
@@ -115,6 +197,9 @@ def get_info():
     except Exception as exc:
         print(f"[ERROR] get_info failed for {url}: {exc}")
         return jsonify({"error": str(exc)}), 422
+    finally:
+        if _RUNTIME_MODE == "render":
+            cleanup_materialized_cookie_files()
 
     result = info.to_dict()
     result["has_ffmpeg"] = _HAS_FFMPEG
@@ -160,7 +245,10 @@ def download_start():
 
     download_id = uuid.uuid4().hex[:12]
 
-    # Create a dedicated directory for this download
+    if _RUNTIME_MODE == "render" and not _render_slots.acquire(blocking=False):
+        return jsonify({"error": "The service is busy. Try again shortly."}), 429
+
+    # Every job gets an isolated directory; Render deletes it after the request lifecycle.
     dl_dir = os.path.join(_DOWNLOAD_DIR, download_id)
     os.makedirs(dl_dir, exist_ok=True)
 
@@ -173,6 +261,8 @@ def download_start():
         "eta": 0.0,
         "filepath": "",
         "error": "",
+        "created_at": time.time(),
+        "job_dir": dl_dir,
     }
 
     def _run() -> None:
@@ -195,9 +285,7 @@ def download_start():
                 end_seconds=end_seconds,
                 format_category=format_category,
             )
-            # Find actual file (yt-dlp might change the extension)
-            files = glob.glob(os.path.join(dl_dir, "*"))
-            actual_path = files[0] if files else filepath
+            actual_path = _resolve_download_file(filepath, dl_dir)
 
             _downloads[download_id].update({
                 "status": "done",
@@ -210,6 +298,11 @@ def download_start():
                 "status": "error",
                 "error": str(exc),
             })
+            if _RUNTIME_MODE == "render":
+                _cleanup_job(download_id, dl_dir)
+        finally:
+            if _RUNTIME_MODE == "render":
+                _render_slots.release()
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
@@ -221,7 +314,7 @@ def download_start():
 def download_status(download_id: str):
     """Poll download progress."""
     state = _downloads.get(download_id)
-    if not state:
+    if not state or _expire_job_if_needed(download_id, state):
         return jsonify({"error": "Descarga no encontrada."}), 404
 
     return jsonify({
@@ -239,18 +332,21 @@ def download_status(download_id: str):
 def download_file(download_id: str):
     """Serve the downloaded file."""
     state = _downloads.get(download_id)
-    if not state or state["status"] != "done":
+    if not state or _expire_job_if_needed(download_id, state) or state["status"] != "done":
         return jsonify({"error": "Archivo no disponible."}), 404
 
     filepath = state["filepath"]
     if not filepath or not os.path.isfile(filepath):
         return jsonify({"error": "Archivo no encontrado en disco."}), 404
 
-    return send_file(
+    response = send_file(
         filepath,
         as_attachment=True,
         download_name=os.path.basename(filepath),
     )
+    if _RUNTIME_MODE == "render":
+        response.call_on_close(lambda: _cleanup_job(download_id, os.path.dirname(filepath)))
+    return response
 
 
 # Legacy sync endpoint (kept for old tests)
@@ -277,11 +373,13 @@ def download_video_legacy():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 422
 
-    files = glob.glob(os.path.join(dl_dir, "*"))
-    if not files:
-        return jsonify({"error": "Descarga terminó pero no se encontró el archivo."}), 500
-
-    return send_file(files[0], as_attachment=True, download_name=os.path.basename(files[0]))
+    try:
+        path = _resolve_download_file("", dl_dir)
+    except ValueError as exc:
+        if _RUNTIME_MODE == "render":
+            _cleanup_job("legacy", dl_dir)
+        return jsonify({"error": str(exc)}), 500
+    return _send_file_with_render_cleanup(path, os.path.basename(path), dl_dir)
 
 
 @app.route("/sw.js")
@@ -309,12 +407,11 @@ def download_subtitles_endpoint():
 
     try:
         sub_path = _dl.download_subtitles(url, lang=lang, fmt=fmt, output_dir=sub_dir)
-        return send_file(
-            sub_path,
-            as_attachment=True,
-            download_name=os.path.basename(sub_path),
-        )
+        return _send_file_with_render_cleanup(sub_path, os.path.basename(sub_path), sub_dir)
     except Exception as exc:
+        if _RUNTIME_MODE == "render":
+            shutil.rmtree(sub_dir, ignore_errors=True)
+            cleanup_materialized_cookie_files()
         return jsonify({"error": str(exc)}), 500
 
 
@@ -334,12 +431,11 @@ def convert_gif_endpoint():
 
     try:
         gif_path = _dl.export_gif(url, start_seconds=start_seconds, end_seconds=end_seconds, output_dir=gif_dir)
-        return send_file(
-            gif_path,
-            as_attachment=True,
-            download_name=os.path.basename(gif_path),
-        )
+        return _send_file_with_render_cleanup(gif_path, os.path.basename(gif_path), gif_dir)
     except Exception as exc:
+        if _RUNTIME_MODE == "render":
+            shutil.rmtree(gif_dir, ignore_errors=True)
+            cleanup_materialized_cookie_files()
         return jsonify({"error": str(exc)}), 500
 
 
@@ -356,6 +452,9 @@ def batch_start_endpoint():
     if not urls:
         return jsonify({"error": "No se proporcionaron URLs para descargar."}), 400
 
+    if _RUNTIME_MODE == "render" and not _render_slots.acquire(blocking=False):
+        return jsonify({"error": "The service is busy. Try again shortly."}), 429
+
     download_id = "batch_" + uuid.uuid4().hex[:12]
     dl_dir = os.path.join(_DOWNLOAD_DIR, download_id)
     os.makedirs(dl_dir, exist_ok=True)
@@ -369,6 +468,8 @@ def batch_start_endpoint():
         "eta": 0.0,
         "filepath": "",
         "error": "",
+        "created_at": time.time(),
+        "job_dir": dl_dir,
     }
 
     def _run() -> None:
@@ -391,6 +492,11 @@ def batch_start_endpoint():
                 "status": "error",
                 "error": str(exc),
             })
+            if _RUNTIME_MODE == "render":
+                _cleanup_job(download_id, dl_dir)
+        finally:
+            if _RUNTIME_MODE == "render":
+                _render_slots.release()
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()

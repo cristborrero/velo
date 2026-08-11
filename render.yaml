@@ -4,3 +4,10 @@ services:
     env: docker
     region: oregon
     plan: free
+    envVars:
+      - key: VELO_RUNTIME_MODE
+        value: render
+      - key: VELO_RENDER_JOB_TTL_SECONDS
+        value: "1800"
+      - key: VELO_RENDER_MAX_CONCURRENT_JOBS
+        value: "2"
